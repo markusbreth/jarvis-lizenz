@@ -1,11 +1,16 @@
 {
   "name": "@markusbreth/jarvis-lizenz",
-  "version": "0.1.1",
-  "description": "Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe.",
+  "version": "0.1.2",
+  "description": "Der geteilte Kern der JARVIS-Lizenzpruefung \u2014 reine Zustandsmaschine, keine Ein-/Ausgabe.",
   "license": "MIT",
-  "type": "module",
   "main": "src/index.js",
-  "exports": { ".": "./src/index.js" },
-  "files": ["src"],
-  "engines": { "node": ">=20" }
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
 }

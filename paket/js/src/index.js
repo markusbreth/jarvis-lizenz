@@ -1,5 +1,13 @@
 // jarvis-lizenz — der geteilte Kern der Lizenzprüfung (JS-Bauart).
 //
+// COMMONJS, NICHT ESM — und das ist eine Messung, keine Vorliebe. Die Finance
+// Suite ist ein CommonJS-Projekt und kann ein ESM-Paket nicht `require()`n;
+// umgekehrt liest Node-ESM ein CommonJS-Modul mit einem einfachen
+// `module.exports = { … }` problemlos, und Bundler (Next) ebenfalls. Eine
+// Bauart bedient damit beide Seiten, ohne dass zwei Fassungen gepflegt werden
+// müssen — und zwei Fassungen wären genau die Drift, gegen die es dieses Paket
+// gibt.
+//
 // Reine Zustandsmaschine: KEINE Netzaufrufe, KEINE Datenbank, KEINE Uhr. Alles
 // Veränderliche kommt als Argument herein. Genau das macht sie gegen dieselben
 // Fälle messbar wie die Python- und die Go-Bauart.
@@ -11,9 +19,9 @@
 // Wortgleich zur Python-Bauart — Abweichungen im Verhalten fängt
 // pruefstand/laeufer.sh.
 
-import { createPublicKey, verify as edVerify } from 'node:crypto';
+const { createPublicKey, verify: edVerify } = require('node:crypto');
 
-export class LizenzFehler extends Error {}
+class LizenzFehler extends Error {}
 
 function b64urlDec(s) {
   return Buffer.from(s + '='.repeat((4 - (s.length % 4)) % 4), 'base64url');
@@ -27,7 +35,7 @@ function b64urlDec(s) {
  * Maschinenraum zweimal aufgetreten; hier ist sie durch `null` abgeschnitten —
  * der Aufrufer muss den Fall benennen.
  */
-export function zeitLesen(wert) {
+function zeitLesen(wert) {
   if (typeof wert !== 'string' || !wert.trim()) return null;
   const t = Date.parse(wert.trim());
   return Number.isNaN(t) ? null : new Date(t);
@@ -81,7 +89,7 @@ function pruefeSignatur(draht, pubkeyPem) {
  * @returns {{gueltig: boolean, grund: string, nutzlast: object,
  *            lizenzId: string|null, brauchtHeartbeat: boolean}}
  */
-export function pruefeToken(token, pubkeyPem, produkt, jetzt) {
+function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   const fertig = (gueltig, grund, nutzlast = {}) => ({
     gueltig, grund, nutzlast,
     lizenzId: nutzlast.license_id == null ? null : String(nutzlast.license_id),
@@ -116,7 +124,7 @@ export function pruefeToken(token, pubkeyPem, produkt, jetzt) {
  *
  * @returns {{status: string, detail: string, seq: number|null, entitlements: object|null}}
  */
-export function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
+function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
   const u = (status, detail, seq = null, entitlements = null) =>
     ({ status, detail, seq, entitlements });
 
@@ -174,7 +182,7 @@ export function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
  *
  * Dazu: `manifestSeq` und `letzteOkPruefung` steigen nur.
  */
-export function naechsterZustand(alt, urteil, jetzt) {
+function naechsterZustand(alt, urteil, jetzt) {
   const a = alt ?? {};
   const neu = {
     letzterStatus: urteil.status,
@@ -211,7 +219,7 @@ export function naechsterZustand(alt, urteil, jetzt) {
  *  • Ein gerade gestarteter Dienst (noch kein Zustand) wird nicht gesperrt.
  *    Sonst sperrte jeder Neustart, bis der erste Lauf durch ist.
  */
-export function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
+function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
   if (!brauchtHeartbeat) return null;
   if (zustand === null || zustand === undefined) return null;
   if (zustand.letzterStatus === 'widerrufen') return 'widerrufen';
@@ -225,3 +233,8 @@ export function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
   }
   return null;
 }
+
+module.exports = {
+  LizenzFehler, zeitLesen, pruefeToken, bewerteManifest,
+  naechsterZustand, sperrgrund,
+};
