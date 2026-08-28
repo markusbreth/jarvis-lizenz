@@ -1,0 +1,20 @@
+{
+  "beschreibung": "`expires_at: null`",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6bnVsbCwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.iGs0kzioozVXWghz2Q0DaL4nU8uvvozYYjd8hLAxSmOVAbkqgiZfowon9QeGUJoklWyNncRux-IApbrV0Kz3Aw"
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "token-unbefristet",
+  "warum": "Null heisst unbefristet, nicht „abgelaufen am 1.1.1970\". Die Verwechslung von „gibt es nicht\" mit „Epoche\" hat im Maschinenraum zweimal einen roten Fehlalarm erzeugt."
+}

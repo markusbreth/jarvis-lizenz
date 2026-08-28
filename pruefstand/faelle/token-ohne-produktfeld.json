@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Ein Token aus der Zeit vor der Console — ohne `product`",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IkFsdCIsImV4cGlyZXNfYXQiOm51bGwsImxpY2Vuc2VfaWQiOiJsaWMtMSIsInJlcXVpcmVfaGVhcnRiZWF0IjpmYWxzZX0.yx67tB_c09Rlhi1O5RZD5-UL6gaTqxSlg04-buvCNUQE9YOFfFycf2jfaIxNmREuBAtiF2cGpuYVEJyFKBJuAw"
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "token-ohne-produktfeld",
+  "warum": "Muss GÜLTIG bleiben. Die abgelöste gen-license.py schrieb das Feld nie; eine strenge Prüfung legte eine laufende Installation lahm."
+}

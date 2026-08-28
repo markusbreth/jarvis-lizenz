@@ -1,0 +1,32 @@
+{
+  "beschreibung": "Manifest mit kleinerer `seq` als die zuletzt angenommene",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "manifest": "eyJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI4VDExOjAwOjAwWiIsImxpY2Vuc2VzIjp7ImxpYy0xIjp7ImZlYXR1cmVzIjpbImFsbCJdLCJsaW1pdHMiOnt9fX0sInByb2R1Y3QiOiJwcnVlZi1wcm9kdWt0IiwicmV2b2tlZCI6W10sInNlcSI6NSwidHlwZSI6ImxpY2Vuc2UtbWFuaWZlc3QiLCJ2YWxpZF91bnRpbCI6IjIwMjYtMDgtMzFUMTE6MDA6MDBaIn0.tToN6CGPbZs7g2nj9iqnNGgdxywLvEVPEeJNjWMINuF6b4BNgmnu2kI1Urm20rLCQDDu673TT2RGar2c2iHkCg",
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.U2NqJ9cSYYgM06e6BrTwre7H3mzC5p2Ot41mqV_PKihJrKcQTuQl8iXuzdQGZDN1P4y0YEdsIq3k7uxKlEh4CQ",
+    "zustand": {
+      "letzte_ok_pruefung": null,
+      "letzter_status": null,
+      "manifest_seq": 10,
+      "pending_seit": null
+    }
+  },
+  "erwartet": {
+    "manifest_detail": "rueckrollung",
+    "manifest_status": "unbekannt",
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": {
+      "letzte_ok_pruefung": null,
+      "letzter_status": "unbekannt",
+      "manifest_seq": 10,
+      "pending_seit": "2026-08-28T12:00:00Z"
+    }
+  },
+  "name": "manifest-rueckrollung",
+  "warum": "Ein alter Stand darf einen Widerruf nicht zurücknehmen. Der Hochstand sinkt dabei NICHT."
+}

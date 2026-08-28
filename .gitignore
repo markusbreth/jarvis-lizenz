@@ -1,0 +1,4 @@
+# Das Go-Binärgebilde des Prüflings wird gebaut, nicht versioniert.
+paket/go/pruefling/pruefling
+__pycache__/
+node_modules/

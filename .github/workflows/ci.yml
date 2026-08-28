@@ -1,0 +1,63 @@
+# Der Prüfstand IST die CI. Es gibt hier nichts anderes zu prüfen: der Kern ist
+# eine reine Zustandsmaschine, und die Frage ist genau eine — geben die drei
+# Bauarten dieselbe Antwort auf dieselben Fälle?
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pruefstand:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.22' }
+
+      - run: pip install cryptography
+
+      - name: Go bauen
+        working-directory: paket/go
+        run: |
+          go vet ./...
+          test -z "$(gofmt -l .)" || { echo "::error::gofmt"; gofmt -l .; exit 1; }
+          go build -o pruefling/pruefling ./pruefling
+
+      - name: Alle drei Bauarten über dieselben Fälle
+        run: pruefstand/laeufer.sh
+
+      # KONTROLLFALL FÜR DEN PRÜFSTAND SELBST. Ohne ihn könnte der Schritt oben
+      # grün melden, weil er gar keine Fälle findet oder gar keine Bauart baut —
+      # ein Nicht-Ergebnis, das wie ein gutes aussieht. Genau dieser Fehler ist
+      # beim Anlegen der Depot-CI am selben Tag passiert (`unittest` meldete
+      # „NO TESTS RAN" mit rc=0).
+      - name: Es müssen alle drei Bauarten und mindestens 20 Fälle gelaufen sein
+        run: |
+          aus=$(pruefstand/laeufer.sh)
+          echo "$aus" | head -1
+          echo "$aus" | grep -q "3 Bauarten (py js go)" || {
+            echo "::error::nicht alle drei Bauarten gelaufen"; exit 1; }
+          n=$(echo "$aus" | grep -oE '^Prüfstand[^—]*— [0-9]+' | grep -oE '[0-9]+$')
+          [ "${n:-0}" -ge 20 ] || { echo "::error::nur ${n:-0} Fälle"; exit 1; }
+
+      # Eine absichtlich falsche Antwort MUSS rot werden. Ein Prüfstand, der
+      # nicht rot werden kann, misst nichts.
+      - name: Der Prüfstand kann rot werden
+        run: |
+          cp paket/py/jarvis_lizenz/__init__.py /tmp/gut.py
+          sed -i 's/return ManifestUrteil("unbekannt", "nicht_aufgefuehrt", seq)/return ManifestUrteil("widerrufen", "nicht_aufgefuehrt", seq)/' \
+            paket/py/jarvis_lizenz/__init__.py
+          if pruefstand/laeufer.sh py >/dev/null 2>&1; then
+            cp /tmp/gut.py paket/py/jarvis_lizenz/__init__.py
+            echo "::error::eine aufgehobene Härtung blieb grün — der Prüfstand misst nichts"
+            exit 1
+          fi
+          cp /tmp/gut.py paket/py/jarvis_lizenz/__init__.py
+          pruefstand/laeufer.sh py >/dev/null

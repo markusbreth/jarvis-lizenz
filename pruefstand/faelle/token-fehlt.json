@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Gar kein Token",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": null
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "fehlt",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "token-fehlt",
+  "warum": "Muss `fehlt` heissen und nicht `ungueltig` — das Produkt zeigt darauf eine andere Oberfläche (Ersteinrichtung statt Fehler)."
+}

@@ -1,0 +1,21 @@
+{
+  "beschreibung": "`require_heartbeat`, aber noch kein Zustand vorhanden",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.U2NqJ9cSYYgM06e6BrTwre7H3mzC5p2Ot41mqV_PKihJrKcQTuQl8iXuzdQGZDN1P4y0YEdsIq3k7uxKlEh4CQ",
+    "zustand": null
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "frisch-gestartet-sperrt-nicht",
+  "warum": "Ein gerade gestarteter Dienst wird nicht gesperrt. Sonst sperrte jeder Neustart, bis der erste Lauf durch ist — und ein Neustart ist genau das, was jemand tut, wenn etwas klemmt."
+}

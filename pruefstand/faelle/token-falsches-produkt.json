@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Gültig signiert, aber für ein anderes Produkt ausgestellt",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoiZWluLWFuZGVyZXMiLCJyZXF1aXJlX2hlYXJ0YmVhdCI6dHJ1ZX0.BZHvF2Kq4sLzYIAjw232Tiux92wixgBufHce690ljQO2YY8Dy5yGbo3Wnd8P00RSyrXIiNkffcfxmt5kl4w0Bw"
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "falsches_produkt",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "token-falsches-produkt",
+  "warum": "Heute fängt das schon die Signatur ab (jedes Produkt hat ein eigenes Paar). Der Wächter ist der zweite Riemen — für den Tag, an dem jemand die Paare zusammenlegt."
+}

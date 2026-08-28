@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Richtig gebaut, aber mit einem anderen Schlüssel signiert",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJleHBpcmVzX2F0IjpudWxsLCJsaWNlbnNlX2lkIjoibGljLTEiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.u158vvdF11yPWG_NKtkg-Jx5L579Bq5b2wLs32IzGLf9327PVqj8lOmfUOx0ul3zUSJeYhHCqjEQh_H6JWK_Cw"
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "token-fremd-signiert",
+  "warum": "Der Fall, den ein Kunde bauen würde, der sich selbst eine Lizenz ausstellt — genau der Befund von Hotel OS am 28.08.2026."
+}
