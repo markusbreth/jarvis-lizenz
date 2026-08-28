@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis-lizenz"
-version = "0.1.2"
+version = "0.1.3"
 description = "Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe."
 requires-python = ">=3.11"
 license = { text = "MIT" }

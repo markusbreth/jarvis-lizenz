@@ -60,6 +60,28 @@ jobs:
           n=$(echo "$aus" | grep -oE '^Prüfstand[^—]*— [0-9]+' | grep -oE '[0-9]+$')
           [ "${n:-0}" -ge 20 ] || { echo "::error::nur ${n:-0} Fälle"; exit 1; }
 
+      # Die mitgelieferte `index.d.ts` gegen den echten Gebrauch halten. Eine
+      # FALSCHE Deklaration ist schlimmer als keine: sie prueft durch und
+      # luegt — der Compiler gibt eine Zusicherung ab, die das Laufzeit-
+      # verhalten nicht deckt, und es faellt erst beim Kunden auf.
+      - name: Typen-Probe (index.d.ts)
+        run: npx -y -p typescript@5.8 tsc --noEmit -p pruefstand/typen/tsconfig.json
+
+      # KONTROLLFALL DAZU: eine absichtlich falsche Zeile MUSS `tsc` rot machen.
+      # Ohne ihn waere nicht zu unterscheiden, ob die Typen stimmen oder ob
+      # `tsc` gar nichts geprueft hat (falscher Pfad, leeres `include`).
+      - name: Die Typen-Probe kann rot werden
+        run: |
+          cp pruefstand/typen/probe.ts /tmp/gut.ts
+          sed -i 's/const seq: number | null = m2.seq;/const seq: string = m2.seq;/' \
+            pruefstand/typen/probe.ts
+          if npx -y -p typescript@5.8 tsc --noEmit -p pruefstand/typen/tsconfig.json >/dev/null 2>&1; then
+            cp /tmp/gut.ts pruefstand/typen/probe.ts
+            echo "::error::eine falsche Typzeile blieb gruen — die Typen-Probe misst nichts"
+            exit 1
+          fi
+          cp /tmp/gut.ts pruefstand/typen/probe.ts
+
       # Eine absichtlich falsche Antwort MUSS rot werden. Ein Prüfstand, der
       # nicht rot werden kann, misst nichts.
       - name: Der Prüfstand kann rot werden

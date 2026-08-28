@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "paths": { "@markusbreth/jarvis-lizenz": ["../../paket/js/index.d.ts"] }
+  },
+  "include": ["probe.ts"]
+}
