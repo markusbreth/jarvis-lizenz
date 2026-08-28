@@ -1,0 +1,20 @@
+{
+  "beschreibung": "Der Prüfschlüssel selbst ist unlesbar (beschädigte oder leere PEM-Datei)",
+  "eingang": {
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMUELL\n-----END PUBLIC KEY-----",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.U2NqJ9cSYYgM06e6BrTwre7H3mzC5p2Ot41mqV_PKihJrKcQTuQl8iXuzdQGZDN1P4y0YEdsIq3k7uxKlEh4CQ"
+  },
+  "erwartet": {
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "pubkey-kaputt",
+  "warum": "DIESER FALL HAT GEFEHLT, und die Lücke war real: JS und Go fingen einen kaputten Schlüssel als `ungueltig` ab, Python liess den rohen ValueError durch — beim Aufrufer ein 500 statt eines 403. Von den fünf Produkten hatte nur BauKI die Härtung, und dessen eigener Test hat sie gefunden. Ein Prüfstand ohne diesen Fall bescheinigt drei Bauarten Einigkeit, die sie nicht haben."
+}

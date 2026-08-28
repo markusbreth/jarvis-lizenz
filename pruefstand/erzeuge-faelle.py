@@ -93,7 +93,8 @@ def fall(name, beschreibung, warum, erwartet, **fall_felder):
         "name": name,
         "beschreibung": beschreibung,
         "warum": warum,
-        "eingang": {"pubkey": PUB, "produkt": PRODUKT, "jetzt": iso(JETZT),
+        "eingang": {"pubkey": fall_felder.pop("pubkey_ersatz", PUB),
+                    "produkt": PRODUKT, "jetzt": iso(JETZT),
                     "karenz_tage": 7, **fall_felder},
         "erwartet": erwartet,
     }
@@ -176,6 +177,18 @@ namen.append(fall(
     "von „gibt es nicht\" mit „Epoche\" hat im Maschinenraum zweimal einen roten "
     "Fehlalarm erzeugt.",
     u(True, "ok"), token=token(expires_at=None)))
+
+namen.append(fall(
+    "pubkey-kaputt",
+    "Der Prüfschlüssel selbst ist unlesbar (beschädigte oder leere PEM-Datei)",
+    "DIESER FALL HAT GEFEHLT, und die Lücke war real: JS und Go fingen einen "
+    "kaputten Schlüssel als `ungueltig` ab, Python liess den rohen ValueError "
+    "durch — beim Aufrufer ein 500 statt eines 403. Von den fünf Produkten "
+    "hatte nur BauKI die Härtung, und dessen eigener Test hat sie gefunden. "
+    "Ein Prüfstand ohne diesen Fall bescheinigt drei Bauarten Einigkeit, die "
+    "sie nicht haben.",
+    u(False, "ungueltig"),
+    token=token(), pubkey_ersatz="-----BEGIN PUBLIC KEY-----\nMUELL\n-----END PUBLIC KEY-----"))
 
 # ── Das Manifest ─────────────────────────────────────────────────────────────
 namen.append(fall(

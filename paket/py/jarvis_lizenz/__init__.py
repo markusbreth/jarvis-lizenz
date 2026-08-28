@@ -74,7 +74,16 @@ def _pruefe_signatur(draht: str, pubkey_pem: str) -> dict:
     except Exception as e:
         raise LizenzFehler(f"base64url unlesbar: {e}") from e
 
-    schluessel = serialization.load_pem_public_key(pubkey_pem.encode())
+    # Ein kaputter oder leerer Schluessel ist ein LizenzFehler, kein roher
+    # ValueError. Sonst schlaegt er beim Aufrufer als 500 durch statt als
+    # "ungueltig" — BauKI hatte diese Haertung als EINZIGES der fuenf Produkte,
+    # und die JS- wie die Go-Bauart hier hatten sie von Anfang an. Nur die
+    # Python-Bauart nicht, und KEIN Fall hat es gemerkt: es gab keinen mit einem
+    # kaputten Schluessel. Genau dafuer ist der Pruefstand da.
+    try:
+        schluessel = serialization.load_pem_public_key(pubkey_pem.encode())
+    except (ValueError, TypeError) as e:
+        raise LizenzFehler(f"Schlüssel unlesbar: {e}") from e
     if not isinstance(schluessel, Ed25519PublicKey):
         raise LizenzFehler("kein Ed25519-Schlüssel")
     try:
