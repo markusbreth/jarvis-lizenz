@@ -9,9 +9,22 @@ on:
   pull_request:
     branches: [main]
 
+# WARUM `ubuntu-latest` UND NICHT DIE SELBSTGEHOSTETEN RUNNER — das ist eine
+# Sicherheitsentscheidung, keine Bequemlichkeit. Bitte nicht "reparieren".
+#
+# Dies ist das ERSTE OEFFENTLICHE Repo der Organisation. Die Runner-Gruppe steht
+# auf `allows_public_repositories: false`, und das ist die richtige Vorgabe: ein
+# selbstgehosteter Runner, der Code aus einem oeffentlichen Repo faehrt, fuehrt
+# beim naechsten Fork-Pull-Request fremden Code auf dem Mac aus. Diese Runner
+# haengen zusaetzlich am Docker-Socket des Hosts.
+#
+# Der Auftrag blieb deshalb in der Warteschlange stehen — kein Fehler, keine
+# Meldung, drei freie Runner daneben. Der falsche Weg waere gewesen, die Flagge
+# umzulegen. Der richtige ist: oeffentliche Repos fahren auf GitHubs Runnern,
+# und die sind fuer oeffentliche Repos kostenlos.
 jobs:
   pruefstand:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,7 +34,7 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version: '1.22' }
 
-      - run: pip install cryptography
+      - run: python -m pip install --quiet cryptography
 
       - name: Go bauen
         working-directory: paket/go
