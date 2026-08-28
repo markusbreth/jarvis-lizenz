@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis-lizenz"
+version = "0.1.0"
+description = "Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# `cryptography` ist die einzige Abhaengigkeit, und sie ist unvermeidlich:
+# Ed25519 steckt nicht in der Standardbibliothek. Jedes Produkt, das eine
+# Lizenzschicht hat, bringt sie ohnehin schon mit — gemessen am 28.08.2026.
+dependencies = ["cryptography>=42"]
+
+[project.urls]
+Repository = "https://github.com/markusbreth/jarvis-lizenz"
+
+[tool.setuptools]
+packages = ["jarvis_lizenz"]
