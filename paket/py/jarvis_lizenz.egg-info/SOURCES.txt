@@ -1,0 +1,7 @@
+pyproject.toml
+jarvis_lizenz/__init__.py
+jarvis_lizenz.egg-info/PKG-INFO
+jarvis_lizenz.egg-info/SOURCES.txt
+jarvis_lizenz.egg-info/dependency_links.txt
+jarvis_lizenz.egg-info/requires.txt
+jarvis_lizenz.egg-info/top_level.txt

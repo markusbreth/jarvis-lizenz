@@ -2,3 +2,4 @@
 paket/go/pruefling/pruefling
 __pycache__/
 node_modules/
+.release/
