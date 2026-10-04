@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Anker: dieselben Token-Faelle durch die REFERENZ (jarvis-email-dashboard).
 
-    ~/Developer/jarvis-email-dashboard/.venv/bin/python pruefstand/anker-referenz.py
+    ~/Developer/jarvis-email-dashboard/jarvis-email-dashboard/.venv/bin/python pruefstand/anker-referenz.py
 
 WOZU: die Faelle in `faelle/` sollen das HEUTIGE Verhalten der Referenz
 festhalten, nicht eine Wunschvorstellung. Ohne diesen Anker koennte ich sie so
@@ -19,7 +19,7 @@ etwas zu aendern. Die Faelle passend zu machen waere das Gegenteil einer Messung
 """
 
 import json, os, pathlib, sys, tempfile
-sys.path.insert(0, str(pathlib.Path.home()/"Developer/jarvis-email-dashboard/dashboard"))
+sys.path.insert(0, str(pathlib.Path.home()/"Developer/jarvis-email-dashboard/jarvis-email-dashboard/dashboard"))
 
 FAELLE = pathlib.Path("pruefstand/faelle")
 # Die Referenz liest ihren Pubkey aus JARVIS_LICENSE_PUBKEY.
