@@ -18,18 +18,21 @@ Laeuft er nicht durch, ist zuerst zu entscheiden WER RECHT HAT — und erst dana
 etwas zu aendern. Die Faelle passend zu machen waere das Gegenteil einer Messung.
 """
 
-import json, os, pathlib, sys, tempfile
+import json, pathlib, sys, tempfile
 sys.path.insert(0, str(pathlib.Path.home()/"Developer/jarvis-email-dashboard/jarvis-email-dashboard/dashboard"))
 
 FAELLE = pathlib.Path("pruefstand/faelle")
-# Die Referenz liest ihren Pubkey aus JARVIS_LICENSE_PUBKEY.
+# Die Referenz liest ihren Pubkey seit LIZENZ1-01 (03.10.2026) nur noch aus der
+# Datei neben dem Modul, nicht mehr aus JARVIS_LICENSE_PUBKEY — wie ihre eigenen
+# Tests wird hier `_PUBKEY_PATH` am Modul gesetzt. Die Umgebungsvariable wirkte
+# danach still nicht mehr: die gueltigen Faelle hiessen dann „invalid".
 erst = json.loads((FAELLE/"token-gueltig.json").read_text())
 pub = erst["eingang"]["pubkey"]
 tmp = pathlib.Path(tempfile.mkdtemp())/"pub.pem"; tmp.write_text(pub)
-os.environ["JARVIS_LICENSE_PUBKEY"] = str(tmp)
 
 import importlib, license as ref  # noqa: E402
 importlib.reload(ref)
+ref._PUBKEY_PATH = tmp
 from datetime import datetime, timezone  # noqa: E402
 
 # Die Referenz kennt ihr Produkt als Konstante "jarvis-email"; die Faelle nutzen
