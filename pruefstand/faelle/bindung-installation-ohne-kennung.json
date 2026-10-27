@@ -1,0 +1,27 @@
+{
+  "beschreibung": "Token gebunden, die Installation kennt ihre Kennung nicht",
+  "eingang": {
+    "erweitert": true,
+    "install_id": null,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA3LTI5VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwaW5nX3VybCI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkIiwicHJvZHVjdCI6InBydWVmLXByb2R1a3QiLCJyZXF1aXJlX2hlYXJ0YmVhdCI6dHJ1ZX0.tUhOU3phwt6erYbyitEU7vcPfaIleh7GciaLbMMmvsYJF_kAsMMabYMR84mgCtgqxV-Rp2fO-8Gg1I6PJT-BAw"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": "fremd",
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "bindung-installation-ohne-kennung",
+  "warum": "Wer seine Kennung verliert (gelöscht, nie erzeugt), darf nicht als passend durchgehen — sonst wäre Löschen der Weg um die Bindung."
+}

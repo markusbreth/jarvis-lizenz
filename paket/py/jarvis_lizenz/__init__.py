@@ -105,7 +105,7 @@ def _pruefe_signatur(draht: str, pubkey_pem: str) -> dict:
 @dataclass
 class TokenUrteil:
     gueltig: bool
-    # ok | fehlt | ungueltig | falsches_produkt | abgelaufen
+    # ok | fehlt | ungueltig | falsches_produkt | abgelaufen | offline_ohne_ablauf
     grund: str
     nutzlast: dict = field(default_factory=dict)
 
@@ -117,6 +117,16 @@ class TokenUrteil:
     @property
     def braucht_heartbeat(self) -> bool:
         return bool(self.nutzlast.get("require_heartbeat"))
+
+    @property
+    def offline(self) -> bool:
+        """Ausdrücklich ausgestellte Offline-Lizenz (seit 0.2.0)."""
+        return self.nutzlast.get("offline") is True
+
+    @property
+    def anker(self) -> datetime | None:
+        """`issued_at` — ab hier zählt der Kunden-Modus ohne Zustand (seit 0.2.0)."""
+        return zeit_lesen(self.nutzlast.get("issued_at"))
 
 
 def pruefe_token(token: str, pubkey_pem: str, produkt: str,
@@ -140,9 +150,41 @@ def pruefe_token(token: str, pubkey_pem: str, produkt: str,
         return TokenUrteil(False, "falsches_produkt", nutzlast)
 
     ablauf = zeit_lesen(nutzlast.get("expires_at"))
+    # Seit 0.2.0: ohne Heartbeat UND ohne Ablauf schützte nur noch der Vertrag —
+    # das „Offline-Perpetual", das es nicht geben soll.
+    if nutzlast.get("offline") is True and ablauf is None:
+        return TokenUrteil(False, "offline_ohne_ablauf", nutzlast)
     if ablauf is not None and jetzt > ablauf:
         return TokenUrteil(False, "abgelaufen", nutzlast)
     return TokenUrteil(True, "ok", nutzlast)
+
+
+def pruefe_bindung(nutzlast: dict | None, install_id: Any) -> str:
+    """Gehört das Token zu DIESER Installation? (seit 0.2.0)
+
+    `ungebunden` — das Token trägt keine `install_id`; was dann gilt, entscheidet
+    das Produkt. `ok` — gebunden und gleich. `fremd` — gebunden und anders,
+    ODER die Installation kennt ihre eigene Kennung nicht: wer seine Kennung
+    verliert, soll nicht als passend durchgehen.
+    """
+    soll = (nutzlast or {}).get("install_id")
+    if soll is None or soll == "":
+        return "ungebunden"
+    if install_id is None or install_id == "":
+        return "fremd"
+    return "ok" if str(soll) == str(install_id) else "fremd"
+
+
+def wirksame_zeit(uhr: datetime, marke: datetime | None) -> tuple[datetime, bool]:
+    """Die Uhr, aber nie vor der Hochwassermarke des Aufrufers (seit 0.2.0).
+
+    Gibt `(jetzt, zurueckgestellt)` zurück. Eine zurückgestellte Uhr verlängert
+    so weder Ablauf noch Karenz; sie wird GEMELDET, nicht bestraft — Sperren
+    bleibt Sache des Produkts.
+    """
+    if marke is None or uhr >= marke:
+        return uhr, False
+    return marke, True
 
 
 # ── 2. Das Manifest ──────────────────────────────────────────────────────────
@@ -259,8 +301,15 @@ def naechster_zustand(alt: Zustand, urteil: ManifestUrteil,
 
 
 def sperrgrund(zustand: Zustand | None, jetzt: datetime, karenz_tage: int,
-               braucht_heartbeat: bool) -> str | None:
+               braucht_heartbeat: bool, kunden_modus: bool = False,
+               anker: datetime | None = None) -> str | None:
     """`None` · `widerrufen` · `pruefung_ueberfaellig`.
+
+    KUNDEN-MODUS (seit 0.2.0): die zweite Nachsicht fällt. Fehlt der Zustand —
+    oder trägt er keinen der beiden Anker —, zählt die Karenz ab `anker` (das
+    `issued_at` des Tokens). Sonst schaltete ein gelöschter Zustand den
+    Fern-Widerruf dauerhaft ab. Ohne lesbaren Anker sperrt der Kunden-Modus
+    sofort. Ohne `kunden_modus` verhält sich alles wie in 0.1.
 
     ZWEI NACHSICHTEN, beide gewollt:
 
@@ -273,12 +322,18 @@ def sperrgrund(zustand: Zustand | None, jetzt: datetime, karenz_tage: int,
     """
     if not braucht_heartbeat:
         return None
+    karenz = timedelta(days=max(0, karenz_tage))
+    ohne_anker = zustand is None or (
+        zustand.letzte_ok_pruefung is None and zustand.pending_seit is None)
+    if kunden_modus and ohne_anker and (zustand is None or zustand.letzter_status != "widerrufen"):
+        if anker is None:
+            return "pruefung_ueberfaellig"
+        return "pruefung_ueberfaellig" if (jetzt - anker) > karenz else None
     if zustand is None:
         return None
     if zustand.letzter_status == "widerrufen":
         return "widerrufen"
 
-    karenz = timedelta(days=max(0, karenz_tage))
     if zustand.letzte_ok_pruefung is not None:
         return "pruefung_ueberfaellig" if (jetzt - zustand.letzte_ok_pruefung) > karenz else None
     if zustand.pending_seit is not None and (jetzt - zustand.pending_seit) > karenz:

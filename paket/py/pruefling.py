@@ -27,7 +27,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from jarvis_lizenz import (  # noqa: E402
-    Zustand, bewerte_manifest, naechster_zustand, pruefe_token, sperrgrund, zeit_lesen,
+    Zustand, bewerte_manifest, naechster_zustand, pruefe_bindung, pruefe_token,
+    sperrgrund, wirksame_zeit, zeit_lesen,
 )
 
 
@@ -36,9 +37,11 @@ def _iso(d) -> str | None:
 
 
 def urteile(fall: dict) -> dict:
-    jetzt = zeit_lesen(fall["jetzt"])
-    if jetzt is None:
+    uhr = zeit_lesen(fall["jetzt"])
+    if uhr is None:
         raise SystemExit("FALL KAPUTT: 'jetzt' ist nicht lesbar")
+    # Seit 0.2.0: `uhr_marke` ist die Hochwassermarke des Aufrufers.
+    jetzt, zurueckgestellt = wirksame_zeit(uhr, zeit_lesen(fall.get("uhr_marke")))
 
     tok = pruefe_token(fall.get("token") or "", fall["pubkey"], fall["produkt"], jetzt)
 
@@ -61,9 +64,10 @@ def urteile(fall: dict) -> dict:
         m = None
         neu = alt
 
-    grund = sperrgrund(neu, jetzt, int(fall.get("karenz_tage", 7)), tok.braucht_heartbeat)
+    grund = sperrgrund(neu, jetzt, int(fall.get("karenz_tage", 7)), tok.braucht_heartbeat,
+                       kunden_modus=fall.get("kunden_modus") is True, anker=tok.anker)
 
-    return {
+    urteil = {
         "token_gueltig": tok.gueltig,
         "token_grund": tok.grund,
         "manifest_status": None if m is None else m.status,
@@ -76,6 +80,16 @@ def urteile(fall: dict) -> dict:
         },
         "sperrgrund": grund,
     }
+    # Die Antworten von 0.2.0 nur, wenn der Fall sie erfragt — so bleiben die
+    # Fälle von 0.1 Byte für Byte, was sie waren.
+    if fall.get("erweitert") is True:
+        urteil["erweiterung"] = {
+            "bindung": pruefe_bindung(tok.nutzlast, fall["install_id"])
+            if "install_id" in fall else None,
+            "offline": tok.offline,
+            "uhr_zurueckgestellt": zurueckgestellt,
+        }
+    return urteil
 
 
 if __name__ == "__main__":

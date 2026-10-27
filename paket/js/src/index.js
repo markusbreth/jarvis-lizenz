@@ -86,14 +86,23 @@ function pruefeSignatur(draht, pubkeyPem) {
  * Offline-Gültigkeit: Signatur, Produkt, Ablauf. Sonst nichts.
  * Grenzen (`max_*`) bleiben beim Produkt — sie heißen dort verschieden.
  *
+ * Seit 0.2.0 dazu: `offline` (ausdrücklich ausgestellte Offline-Lizenz) und
+ * `anker` (`issued_at`), ab dem `sperrgrund` im Kunden-Modus zählt, wenn kein
+ * Zustand da ist. Ein Offline-Token OHNE lesbaren Ablauf wird abgewiesen
+ * (`offline_ohne_ablauf`): ohne Heartbeat und ohne Ablauf schützte nur noch der
+ * Vertrag — genau das „Offline-Perpetual", das es nicht geben soll.
+ *
  * @returns {{gueltig: boolean, grund: string, nutzlast: object,
- *            lizenzId: string|null, brauchtHeartbeat: boolean}}
+ *            lizenzId: string|null, brauchtHeartbeat: boolean,
+ *            offline: boolean, anker: Date|null}}
  */
 function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   const fertig = (gueltig, grund, nutzlast = {}) => ({
     gueltig, grund, nutzlast,
     lizenzId: nutzlast.license_id == null ? null : String(nutzlast.license_id),
     brauchtHeartbeat: Boolean(nutzlast.require_heartbeat),
+    offline: nutzlast.offline === true,
+    anker: zeitLesen(nutzlast.issued_at),
   });
 
   if (!String(token ?? '').trim()) return fertig(false, 'fehlt');
@@ -110,8 +119,45 @@ function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   if (p != null && p !== produkt) return fertig(false, 'falsches_produkt', nutzlast);
 
   const ablauf = zeitLesen(nutzlast.expires_at);
+  if (nutzlast.offline === true && ablauf === null) {
+    return fertig(false, 'offline_ohne_ablauf', nutzlast);
+  }
   if (ablauf !== null && jetzt > ablauf) return fertig(false, 'abgelaufen', nutzlast);
   return fertig(true, 'ok', nutzlast);
+}
+
+/**
+ * Gehört das Token zu DIESER Installation? (seit 0.2.0)
+ *
+ * `'ungebunden'` — das Token trägt keine `install_id` (Altbestand, oder
+ * absichtlich nicht gebunden); was dann gilt, entscheidet das Produkt.
+ * `'ok'` — gebunden und gleich. `'fremd'` — gebunden und anders, ODER die
+ * Installation kennt ihre eigene Kennung nicht: wer seine Kennung verliert,
+ * soll nicht als passend durchgehen.
+ */
+function pruefeBindung(nutzlast, installId) {
+  const soll = (nutzlast ?? {}).install_id;
+  if (soll === null || soll === undefined || soll === '') return 'ungebunden';
+  if (installId === null || installId === undefined || installId === '') return 'fremd';
+  return String(soll) === String(installId) ? 'ok' : 'fremd';
+}
+
+/**
+ * Die Zeit, mit der gerechnet wird: die Uhr, aber nie vor der Hochwassermarke
+ * (seit 0.2.0). Die Marke liefert der Aufrufer (z. B. der späteste
+ * Zeitstempel in seiner Datenbank) — der Kern bleibt ohne Uhr und ohne DB.
+ *
+ * Eine zurückgestellte Uhr verlängert so weder Ablauf noch Karenz. Sie wird
+ * GEMELDET (`zurueckgestellt`), nicht bestraft: Sperren bleibt Sache des
+ * Produkts, und eine Uhr kann auch aus harmlosen Gründen springen.
+ *
+ * @returns {{jetzt: Date, zurueckgestellt: boolean}}
+ */
+function wirksameZeit(uhr, marke) {
+  if (marke === null || marke === undefined || uhr >= marke) {
+    return { jetzt: uhr, zurueckgestellt: false };
+  }
+  return { jetzt: marke, zurueckgestellt: true };
 }
 
 // ── 2. Das Manifest ─────────────────────────────────────────────────────────
@@ -210,6 +256,13 @@ function naechsterZustand(alt, urteil, jetzt) {
 /**
  * `null` · `'widerrufen'` · `'pruefung_ueberfaellig'`.
  *
+ * KUNDEN-MODUS (seit 0.2.0, `optionen.kundenModus`): die zweite Nachsicht
+ * fällt. Fehlt der Zustand — oder trägt er keinen der beiden Anker —, zählt
+ * die Karenz ab `optionen.anker` (das `issued_at` des Tokens, siehe
+ * `pruefeToken`). Sonst schaltete ein gelöschter Zustand den Fern-Widerruf
+ * dauerhaft ab. Ohne lesbaren Anker sperrt der Kunden-Modus sofort. Ohne
+ * `optionen` verhält sich alles wie in 0.1.
+ *
  * ZWEI NACHSICHTEN, beide gewollt:
  *
  *  • Ohne `require_heartbeat` im signierten Token gibt es nichts zu prüfen — und
@@ -219,12 +272,19 @@ function naechsterZustand(alt, urteil, jetzt) {
  *  • Ein gerade gestarteter Dienst (noch kein Zustand) wird nicht gesperrt.
  *    Sonst sperrte jeder Neustart, bis der erste Lauf durch ist.
  */
-function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
+function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat, optionen = {}) {
   if (!brauchtHeartbeat) return null;
+  const karenzMs = Math.max(0, karenzTage) * 86400000;
+  const ohneAnker = zustand === null || zustand === undefined
+    || (zustand.letzteOkPruefung == null && zustand.pendingSeit == null);
+  if (optionen.kundenModus && ohneAnker && zustand?.letzterStatus !== 'widerrufen') {
+    const anker = optionen.anker ?? null;
+    if (anker === null) return 'pruefung_ueberfaellig';
+    return (jetzt - anker) > karenzMs ? 'pruefung_ueberfaellig' : null;
+  }
   if (zustand === null || zustand === undefined) return null;
   if (zustand.letzterStatus === 'widerrufen') return 'widerrufen';
 
-  const karenzMs = Math.max(0, karenzTage) * 86400000;
   if (zustand.letzteOkPruefung != null) {
     return (jetzt - zustand.letzteOkPruefung) > karenzMs ? 'pruefung_ueberfaellig' : null;
   }
@@ -235,6 +295,6 @@ function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
 }
 
 module.exports = {
-  LizenzFehler, zeitLesen, pruefeToken, bewerteManifest,
-  naechsterZustand, sperrgrund,
+  LizenzFehler, zeitLesen, pruefeToken, pruefeBindung, wirksameZeit,
+  bewerteManifest, naechsterZustand, sperrgrund,
 };

@@ -12,7 +12,8 @@
 
 import { readFileSync } from 'node:fs';
 import {
-  pruefeToken, bewerteManifest, naechsterZustand, sperrgrund, zeitLesen,
+  pruefeToken, pruefeBindung, wirksameZeit, bewerteManifest, naechsterZustand,
+  sperrgrund, zeitLesen,
 } from './src/index.js';
 
 const fall = JSON.parse(readFileSync(0, 'utf-8'));
@@ -24,11 +25,15 @@ const iso = (d) => (d === null || d === undefined
   ? null
   : new Date(d).toISOString().replace(/\.\d{3}Z$/, 'Z'));
 
-const jetzt = zeitLesen(fall.jetzt);
-if (jetzt === null) {
+const uhr = zeitLesen(fall.jetzt);
+if (uhr === null) {
   console.error("FALL KAPUTT: 'jetzt' ist nicht lesbar");
   process.exit(2);
 }
+// Seit 0.2.0: `uhr_marke` ist die Hochwassermarke des Aufrufers. Fehlt sie,
+// ist `jetzt` die Uhr — wie in 0.1.
+const zeit = wirksameZeit(uhr, zeitLesen(fall.uhr_marke ?? null));
+const jetzt = zeit.jetzt;
 
 const tok = pruefeToken(fall.token ?? '', fall.pubkey, fall.produkt, jetzt);
 
@@ -52,7 +57,8 @@ if (Object.prototype.hasOwnProperty.call(fall, 'manifest')) {
   neu = naechsterZustand(alt ?? {}, m, jetzt);
 }
 
-const grund = sperrgrund(neu, jetzt, Number(fall.karenz_tage ?? 7), tok.brauchtHeartbeat);
+const grund = sperrgrund(neu, jetzt, Number(fall.karenz_tage ?? 7), tok.brauchtHeartbeat,
+                         { kundenModus: fall.kunden_modus === true, anker: tok.anker });
 
 const urteil = {
   token_gueltig: tok.gueltig,
@@ -67,6 +73,17 @@ const urteil = {
   },
   sperrgrund: grund,
 };
+// Die Antworten von 0.2.0 nur, wenn der Fall sie erfragt (`erweitert`). So
+// bleiben die Fälle von 0.1 Byte für Byte, was sie waren — sie sind der Beleg,
+// dass 0.2.0 nichts an ihnen ändert.
+if (fall.erweitert === true) {
+  urteil.erweiterung = {
+    bindung: Object.prototype.hasOwnProperty.call(fall, 'install_id')
+      ? pruefeBindung(tok.nutzlast, fall.install_id) : null,
+    offline: tok.offline,
+    uhr_zurueckgestellt: zeit.zurueckgestellt,
+  };
+}
 
 // Ohne Ersetzer-Array. `JSON.stringify(x, keys)` ist eine ERLAUBNISLISTE und
 // filtert auch VERSCHACHTELTE Schlüssel weg — `zustand` kam damit als `{}`

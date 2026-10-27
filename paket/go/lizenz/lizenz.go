@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -91,7 +92,7 @@ func pruefeSignatur(draht, pubkeyPEM string) (map[string]any, error) {
 // TokenUrteil ist die Offline-Aussage ueber ein Token.
 type TokenUrteil struct {
 	Gueltig  bool
-	Grund    string // ok | fehlt | ungueltig | falsches_produkt | abgelaufen
+	Grund    string // ok | fehlt | ungueltig | falsches_produkt | abgelaufen | offline_ohne_ablauf
 	Nutzlast map[string]any
 }
 
@@ -111,6 +112,32 @@ func (t TokenUrteil) BrauchtHeartbeat() bool {
 	return b
 }
 
+// Offline sagt, ob das Token eine ausdruecklich ausgestellte Offline-Lizenz
+// ist (seit 0.2.0).
+func (t TokenUrteil) Offline() bool {
+	b, _ := t.Nutzlast["offline"].(bool)
+	return b
+}
+
+// Anker ist `issued_at` — ab hier zaehlt SperrgrundKunde ohne Zustand
+// (seit 0.2.0). nil, wenn nicht lesbar.
+func (t TokenUrteil) Anker() *time.Time {
+	if s, ok := t.Nutzlast["issued_at"].(string); ok {
+		if a, gut := ZeitLesen(s); gut {
+			return &a
+		}
+	}
+	return nil
+}
+
+// tokenAblauf liest `expires_at`; false, wenn es fehlt oder unlesbar ist.
+func tokenAblauf(nutzlast map[string]any) (time.Time, bool) {
+	if s, ok := nutzlast["expires_at"].(string); ok {
+		return ZeitLesen(s)
+	}
+	return time.Time{}, false
+}
+
 // PruefeToken entscheidet die Offline-Gueltigkeit: Signatur, Produkt, Ablauf.
 // Grenzen (max_*) bleiben beim Produkt — sie heissen dort verschieden.
 func PruefeToken(token, pubkeyPEM, produkt string, jetzt time.Time) TokenUrteil {
@@ -128,12 +155,44 @@ func PruefeToken(token, pubkeyPEM, produkt string, jetzt time.Time) TokenUrteil 
 			return TokenUrteil{false, "falsches_produkt", nutzlast}
 		}
 	}
-	if s, ok := nutzlast["expires_at"].(string); ok {
-		if ablauf, gut := ZeitLesen(s); gut && jetzt.After(ablauf) {
-			return TokenUrteil{false, "abgelaufen", nutzlast}
-		}
+	ablauf, gut := tokenAblauf(nutzlast)
+	// Seit 0.2.0: ohne Heartbeat UND ohne Ablauf schuetzte nur noch der
+	// Vertrag — das „Offline-Perpetual", das es nicht geben soll.
+	if off, _ := nutzlast["offline"].(bool); off && !gut {
+		return TokenUrteil{false, "offline_ohne_ablauf", nutzlast}
+	}
+	if gut && jetzt.After(ablauf) {
+		return TokenUrteil{false, "abgelaufen", nutzlast}
 	}
 	return TokenUrteil{true, "ok", nutzlast}
+}
+
+// PruefeBindung sagt, ob das Token zu DIESER Installation gehoert (seit 0.2.0):
+// "ungebunden" (keine `install_id` im Token; was dann gilt, entscheidet das
+// Produkt), "ok" (gebunden und gleich) oder "fremd" (gebunden und anders,
+// ODER die Installation kennt ihre eigene Kennung nicht).
+func PruefeBindung(nutzlast map[string]any, installID *string) string {
+	soll, da := nutzlast["install_id"]
+	if !da || soll == nil || soll == "" {
+		return "ungebunden"
+	}
+	if installID == nil || *installID == "" {
+		return "fremd"
+	}
+	if fmt.Sprint(soll) == *installID {
+		return "ok"
+	}
+	return "fremd"
+}
+
+// WirksameZeit ist die Uhr, aber nie vor der Hochwassermarke des Aufrufers
+// (seit 0.2.0). Eine zurueckgestellte Uhr verlaengert so weder Ablauf noch
+// Karenz; sie wird GEMELDET (zweiter Wert), nicht bestraft.
+func WirksameZeit(uhr time.Time, marke *time.Time) (time.Time, bool) {
+	if marke == nil || !uhr.Before(*marke) {
+		return uhr, false
+	}
+	return *marke, true
 }
 
 // ── 2. Das Manifest ─────────────────────────────────────────────────────────
@@ -292,4 +351,33 @@ func Sperrgrund(zustand *Zustand, jetzt time.Time, karenzTage int,
 		return "pruefung_ueberfaellig"
 	}
 	return ""
+}
+
+// SperrgrundKunde ist Sperrgrund im KUNDEN-MODUS (seit 0.2.0): die zweite
+// Nachsicht faellt. Fehlt der Zustand — oder traegt er keinen der beiden
+// Anker —, zaehlt die Karenz ab `anker` (das `issued_at` des Tokens). Sonst
+// schaltete ein geloeschter Zustand den Fern-Widerruf dauerhaft ab. Ohne
+// lesbaren Anker sperrt der Kunden-Modus sofort. Eine eigene Funktion statt
+// eines neuen Parameters, damit kein Aufrufer von 0.1 bricht.
+func SperrgrundKunde(zustand *Zustand, jetzt time.Time, karenzTage int,
+	brauchtHeartbeat bool, anker *time.Time) string {
+
+	if !brauchtHeartbeat {
+		return ""
+	}
+	ohneAnker := zustand == nil ||
+		(zustand.LetzteOkPruefung == nil && zustand.PendingSeit == nil)
+	if ohneAnker && (zustand == nil || zustand.LetzterStatus != "widerrufen") {
+		if anker == nil {
+			return "pruefung_ueberfaellig"
+		}
+		if karenzTage < 0 {
+			karenzTage = 0
+		}
+		if jetzt.Sub(*anker) > time.Duration(karenzTage)*24*time.Hour {
+			return "pruefung_ueberfaellig"
+		}
+		return ""
+	}
+	return Sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat)
 }

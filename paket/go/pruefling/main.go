@@ -35,6 +35,17 @@ type fallEin struct {
 	Token      *string     `json:"token"`
 	Manifest   *string     `json:"manifest"`
 	Zustand    *zustandEin `json:"zustand"`
+	// seit 0.2.0
+	UhrMarke    *string `json:"uhr_marke"`
+	KundenModus bool    `json:"kunden_modus"`
+	InstallID   *string `json:"install_id"`
+	Erweitert   bool    `json:"erweitert"`
+}
+
+type erweiterungAus struct {
+	Bindung            *string `json:"bindung"`
+	Offline            bool    `json:"offline"`
+	UhrZurueckgestellt bool    `json:"uhr_zurueckgestellt"`
 }
 
 type zustandAus struct {
@@ -51,6 +62,9 @@ type urteilAus struct {
 	ManifestDetail *string     `json:"manifest_detail"`
 	Zustand        *zustandAus `json:"zustand"`
 	Sperrgrund     *string     `json:"sperrgrund"`
+	// Nur, wenn der Fall sie erfragt (`erweitert`) — so bleiben die Faelle von
+	// 0.1 Byte fuer Byte, was sie waren.
+	Erweiterung *erweiterungAus `json:"erweiterung,omitempty"`
 }
 
 // ISO mit `Z`, ohne Bruchteile — wie die Python-Bauart sie schreibt. Eine andere
@@ -96,11 +110,12 @@ func main() {
 	}
 	_, manifestDa := frei["manifest"]
 
-	jetzt, gut := lizenz.ZeitLesen(f.Jetzt)
+	uhr, gut := lizenz.ZeitLesen(f.Jetzt)
 	if !gut {
 		fmt.Fprintln(os.Stderr, "FALL KAPUTT: 'jetzt' ist nicht lesbar")
 		os.Exit(2)
 	}
+	jetzt, zurueckgestellt := lizenz.WirksameZeit(uhr, zeigerZeit(f.UhrMarke))
 	tokenText := ""
 	if f.Token != nil {
 		tokenText = *f.Token
@@ -141,7 +156,12 @@ func main() {
 	if f.KarenzTage != nil {
 		karenz = *f.KarenzTage
 	}
-	grund := lizenz.Sperrgrund(neu, jetzt, karenz, tok.BrauchtHeartbeat())
+	var grund string
+	if f.KundenModus {
+		grund = lizenz.SperrgrundKunde(neu, jetzt, karenz, tok.BrauchtHeartbeat(), tok.Anker())
+	} else {
+		grund = lizenz.Sperrgrund(neu, jetzt, karenz, tok.BrauchtHeartbeat())
+	}
 
 	aus := urteilAus{TokenGueltig: tok.Gueltig, TokenGrund: tok.Grund}
 	if m != nil {
@@ -162,6 +182,15 @@ func main() {
 	}
 	if grund != "" {
 		aus.Sperrgrund = &grund
+	}
+
+	if f.Erweitert {
+		e := erweiterungAus{Offline: tok.Offline(), UhrZurueckgestellt: zurueckgestellt}
+		if _, da := frei["install_id"]; da {
+			b := lizenz.PruefeBindung(tok.Nutzlast, f.InstallID)
+			e.Bindung = &b
+		}
+		aus.Erweiterung = &e
 	}
 
 	b, _ := json.Marshal(aus)

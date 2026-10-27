@@ -1,0 +1,38 @@
+{
+  "beschreibung": "Kunden-Modus, Zustand `widerrufen` ohne Zeitstempel",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "kunden_modus": true,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDgtMjdUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.RgKzxdeL4LF22HU3FsBxhYRF8xQQRDuULa_erGQ_44cMUK_EppOHVRLBXTRRDyMUvVhWyI7VL4t0EfGp4xtuDw",
+    "zustand": {
+      "letzte_ok_pruefung": null,
+      "letzter_status": "widerrufen",
+      "manifest_seq": null,
+      "pending_seit": null
+    }
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": "widerrufen",
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": {
+      "letzte_ok_pruefung": null,
+      "letzter_status": "widerrufen",
+      "manifest_seq": null,
+      "pending_seit": null
+    }
+  },
+  "name": "kunden-modus-widerruf-ohne-anker",
+  "warum": "Ein Widerruf klebt auch dann, wenn die Zeitstempel fehlen — der Kunden-Modus darf aus `widerrufen` kein „Karenz ab issued_at“ machen."
+}

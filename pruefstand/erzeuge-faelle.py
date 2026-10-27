@@ -356,6 +356,169 @@ namen.append(fall(
     u(True, "ok", None, None, None, None),
     token=token(), zustand=None))
 
+# ── Seit 0.2.0: Kunden-Modus, Bindung, Offline, Hochwassermarke ──────────────
+# Diese Fälle tragen `erweitert: true` und erwarten zusätzlich `erweiterung`.
+# Die Fälle darüber bleiben, wie sie in 0.1 waren — sie sind der Beleg, dass
+# 0.2.0 nichts an ihnen ändert.
+
+
+def ue(basis, bindung=None, offline=False, zurueckgestellt=False):
+    return {**basis, "erweiterung": {"bindung": bindung, "offline": offline,
+                                     "uhr_zurueckgestellt": zurueckgestellt}}
+
+
+def efall(name, beschreibung, warum, erwartet, **felder):
+    return fall(name, beschreibung, warum, erwartet, erweitert=True, **felder)
+
+
+namen.append(efall(
+    "kunden-modus-ohne-zustand-nach-karenz",
+    "Kunden-Modus, kein Zustand, Token vor 30 Tagen ausgestellt (Karenz 7)",
+    "LÜCKE G1 DER 0.1: ein gelöschter Zustand hiess „frisch gestartet“ und "
+    "sperrte nie — ein SQL-DELETE schaltete den Fern-Widerruf ab. Im "
+    "Kunden-Modus zählt die Karenz ab `issued_at`. Gegenstück ohne "
+    "Kunden-Modus: frisch-gestartet-sperrt-nicht.",
+    ue(u(True, "ok", None, None, "pruefung_ueberfaellig", None)),
+    token=token(), zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-ohne-zustand-in-karenz",
+    "Kunden-Modus, kein Zustand, Token vor 3 Tagen ausgestellt (Karenz 7)",
+    "Das Paar zu 30 Tagen: eine frische Installation läuft, bis der erste "
+    "Heartbeat durch ist. Eine Schwelle, die immer sperrt, sähe im Fall davor "
+    "genauso aus.",
+    ue(u(True, "ok", None, None, None, None)),
+    token=token(issued_at=iso(JETZT - timedelta(days=3))), zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "leerer-zustand-ohne-kunden-modus",
+    "Zustand ohne beide Anker, kein Kunden-Modus",
+    "Hält das Verhalten der 0.1 fest: ein Zustand ohne `letzte_ok_pruefung` und "
+    "ohne `pending_seit` sperrt nie. Das ist die Lücke, die der Kunden-Modus "
+    "schliesst — Gegenstück: kunden-modus-leerer-zustand.",
+    ue(u(True, "ok", None, None, None, zustand(letzter_status="aktiv"))),
+    token=token(), zustand=zustand(letzter_status="aktiv")))
+
+namen.append(efall(
+    "kunden-modus-leerer-zustand",
+    "Kunden-Modus, Zustand ohne beide Anker, Token vor 30 Tagen ausgestellt",
+    "Wer statt der Zeile nur die Zeitstempel löscht, bekommt dasselbe wie beim "
+    "Löschen der Zeile: Karenz ab `issued_at`.",
+    ue(u(True, "ok", None, None, "pruefung_ueberfaellig", zustand(letzter_status="aktiv"))),
+    token=token(), zustand=zustand(letzter_status="aktiv"), kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-ohne-anker",
+    "Kunden-Modus, kein Zustand, Token ohne `issued_at`",
+    "Ohne Zustand und ohne Anker gibt es nichts, ab dem gezählt werden kann. "
+    "Der Kunden-Modus sperrt dann sofort, statt nie.",
+    ue(u(True, "ok", None, None, "pruefung_ueberfaellig", None)),
+    token=token(issued_at=None), zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-widerruf-ohne-anker",
+    "Kunden-Modus, Zustand `widerrufen` ohne Zeitstempel",
+    "Ein Widerruf klebt auch dann, wenn die Zeitstempel fehlen — der "
+    "Kunden-Modus darf aus `widerrufen` kein „Karenz ab issued_at“ machen.",
+    ue(u(True, "ok", None, None, "widerrufen", zustand(letzter_status="widerrufen"))),
+    token=token(issued_at=iso(JETZT - timedelta(days=1))),
+    zustand=zustand(letzter_status="widerrufen"), kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-mit-zustand-wie-bisher",
+    "Kunden-Modus, zuletzt vor 6 Tagen erfolgreich geprüft, Token 30 Tage alt",
+    "Mit einem Zustand rechnet der Kunden-Modus genau wie 0.1 — sonst sperrte "
+    "er jede Installation, deren Token älter als die Karenz ist.",
+    ue(u(True, "ok", None, None, None,
+         zustand(letzter_status="aktiv", letzte_ok_pruefung=iso(JETZT - timedelta(days=6))))),
+    token=token(),
+    zustand=zustand(letzter_status="aktiv", letzte_ok_pruefung=iso(JETZT - timedelta(days=6))),
+    kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-ohne-heartbeat",
+    "Kunden-Modus, Token ohne `require_heartbeat`, kein Zustand",
+    "Die Politik steckt weiter im signierten Token: ohne Heartbeat gibt es "
+    "nichts zu prüfen, auch im Kunden-Modus. Ein Einmal-Kauf ohne Heartbeat "
+    "stellt man deshalb gar nicht erst aus.",
+    ue(u(True, "ok", None, None, None, None)),
+    token=token(require_heartbeat=False), zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "bindung-ok",
+    "Token an `inst-1` gebunden, Installation ist `inst-1`",
+    "Der Gutfall der Bindung. Ohne ihn wäre nicht zu unterscheiden, ob eine "
+    "Bauart vergleicht oder pauschal ablehnt.",
+    ue(u(True, "ok"), bindung="ok"),
+    token=token(install_id="inst-1"), install_id="inst-1"))
+
+namen.append(efall(
+    "bindung-fremd",
+    "Token an `inst-1` gebunden, Installation ist `inst-2`",
+    "LÜCKE G3 DER 0.1: ein Token lief auf beliebig vielen Installationen. Die "
+    "Bindung ist ein eigenes Urteil — was bei `fremd` passiert, entscheidet das "
+    "Produkt; die Gültigkeit des Tokens bleibt unberührt.",
+    ue(u(True, "ok"), bindung="fremd"),
+    token=token(install_id="inst-1"), install_id="inst-2"))
+
+namen.append(efall(
+    "bindung-installation-ohne-kennung",
+    "Token gebunden, die Installation kennt ihre Kennung nicht",
+    "Wer seine Kennung verliert (gelöscht, nie erzeugt), darf nicht als "
+    "passend durchgehen — sonst wäre Löschen der Weg um die Bindung.",
+    ue(u(True, "ok"), bindung="fremd"),
+    token=token(install_id="inst-1"), install_id=None))
+
+namen.append(efall(
+    "bindung-ungebunden",
+    "Token ohne `install_id`, Installation `inst-1`",
+    "Altbestand und absichtlich ungebundene Tokens: der Kern sagt `ungebunden`, "
+    "nicht `fremd` — sonst bräche jedes Token, das vor 0.2.0 ausgestellt wurde.",
+    ue(u(True, "ok"), bindung="ungebunden"),
+    token=token(), install_id="inst-1"))
+
+namen.append(efall(
+    "offline-mit-ablauf",
+    "Offline-Token mit Ablauf in einem Jahr",
+    "Die ausdrücklich ausgestellte Offline-Lizenz: gültig, als offline erkannt.",
+    ue(u(True, "ok"), offline=True),
+    token=token(offline=True, require_heartbeat=False)))
+
+namen.append(efall(
+    "offline-ohne-ablauf",
+    "Offline-Token ohne Ablauf",
+    "Kein Offline-Perpetual: ohne Heartbeat und ohne Ablauf schützte nur noch "
+    "der Vertrag. Gegenstück: token-unbefristet (ohne `offline`) bleibt gültig.",
+    ue(u(False, "offline_ohne_ablauf"), offline=True),
+    token=token(offline=True, require_heartbeat=False, expires_at=None)))
+
+namen.append(efall(
+    "uhr-zurueckgestellt",
+    "Token gestern abgelaufen, Uhr um 10 Tage zurückgestellt, Marke = heute",
+    "LÜCKE G2 DER 0.1: die Uhr zurückzustellen verlängerte Ablauf und Karenz. "
+    "Mit der Hochwassermarke rechnet der Kern ab der Marke und meldet die "
+    "Rückstellung. Gegenstück ohne Marke: uhr-zurueckgestellt-ohne-marke.",
+    ue(u(False, "abgelaufen"), zurueckgestellt=True),
+    token=token(expires_at=iso(JETZT - timedelta(days=1))),
+    jetzt=iso(JETZT - timedelta(days=10)), uhr_marke=iso(JETZT)))
+
+namen.append(efall(
+    "uhr-zurueckgestellt-ohne-marke",
+    "Dasselbe Token, dieselbe zurückgestellte Uhr, keine Marke",
+    "Hält fest, was ohne Marke passiert: das abgelaufene Token gilt wieder. "
+    "Dieser Fall ist die Lücke, nicht das Soll.",
+    ue(u(True, "ok")),
+    token=token(expires_at=iso(JETZT - timedelta(days=1))),
+    jetzt=iso(JETZT - timedelta(days=10))))
+
+namen.append(efall(
+    "uhr-vor-der-marke",
+    "Uhr steht nach der Marke",
+    "Der Normalfall: die Uhr läuft vorwärts, die Marke ist älter. Nichts wird "
+    "gemeldet, gerechnet wird mit der Uhr.",
+    ue(u(True, "ok")),
+    token=token(), uhr_marke=iso(JETZT - timedelta(days=1))))
+
 print(f"{len(namen)} Fälle geschrieben nach {ZIEL}")
 for n in sorted(namen):
     print("  ", n)
