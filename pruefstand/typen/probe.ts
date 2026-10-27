@@ -16,8 +16,10 @@
 import kern, {
   bewerteManifest,
   naechsterZustand,
+  pruefeBindung,
   pruefeToken,
   sperrgrund,
+  wirksameZeit,
   zeitLesen,
   type ManifestUrteil,
   type TokenUrteil,
@@ -58,9 +60,21 @@ const ueberDefault: TokenUrteil = kern.pruefeToken('a.b', 'PEM', 'produkt', jetz
 // 5. Zeit lesen.
 const zeit: Date | null = zeitLesen('2027-01-31T00:00:00Z');
 
+// 6. Seit 0.2.0: Kunden-Modus, Bindung, Offline, Hochwassermarke.
+const offline: boolean = urteil.offline;
+const anker: Date | null = urteil.anker;
+const bindung: 'ungebunden' | 'ok' | 'fremd' = pruefeBindung(urteil.nutzlast, 'inst-1');
+const ohneKennung: string = pruefeBindung(urteil.nutzlast, null);
+const wirksam: { jetzt: Date; zurueckgestellt: boolean } = wirksameZeit(jetzt, zeit);
+const kundenSperre: string = sperrgrund(null, wirksam.jetzt, 7, heartbeat,
+  { kundenModus: true, anker });
+const ueberDefaultBindung: string = kern.pruefeBindung(null, 'inst-1');
+
 // Alles benutzen, damit `noUnusedLocals` nicht zuschlaegt und die Zeilen
 // wirklich geprueft werden statt wegoptimiert.
 export const summe = [
   gueltig, grund, lizenzId, heartbeat, kunde, m1.status, m2.detail, seq,
   neu.letzterStatus, sperre, keinZustand, ueberDefault.gueltig, zeit,
+  offline, anker, bindung, ohneKennung, wirksam.zurueckgestellt, kundenSperre,
+  ueberDefaultBindung,
 ].length;

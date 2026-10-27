@@ -49,6 +49,9 @@ machen.
 | `require_heartbeat` | **entscheidet, ob der Fern-Widerruf überhaupt greift** |
 | `license_server` | Manifest-URL |
 | `ping_url` | Lebenszeichen-Ziel; gepingt wird `{ping_url}/ping` |
+| `install_id` | *seit 0.2.0, optional:* bindet das Token an eine Installation (`pruefeBindung`) |
+| `renew_url` | *seit 0.2.0, optional:* wo eine Installation ein neues Token holt. Der Kern liest es nicht; es steht im Token, damit der Erneuerungsweg so wenig umbiegbar ist wie `license_server` |
+| `offline` | *seit 0.2.0, optional:* ausdrücklich ausgestellte Offline-Lizenz. **Nur mit lesbarem `expires_at` gültig** (`offline_ohne_ablauf`) |
 
 `license_server` und `ping_url` stehen **im signierten Token**, nicht in der
 Umgebung: sonst ließe sich der Widerruf per Konfiguration umbiegen oder
@@ -92,6 +95,34 @@ sperrt.**
 Dazu die Rückroll-Sperre: ein Manifest mit kleinerer `seq` als die zuletzt
 angenommene wird verworfen (`unbekannt`), damit ein alter Stand keinen Widerruf
 zurücknimmt.
+
+---
+
+## Seit 0.2.0: was eine Installation beim Kunden nicht abschalten können soll
+
+Alles hier ist **zusätzlich**. Ein Produkt, das nichts davon aufruft, bekommt
+von 0.2.0 dasselbe wie von 0.1 — die 25 Fälle von 0.1 stehen unverändert im
+Prüfstand und sind der Beleg.
+
+**Kunden-Modus.** `sperrgrund(…, {kundenModus, anker})` (Go: `SperrgrundKunde`)
+lässt die zweite Nachsicht fallen: fehlt der Zustand — oder trägt er weder
+`letzte_ok_pruefung` noch `pending_seit` —, zählt die Karenz ab `anker`, dem
+`issued_at` des Tokens. Ohne lesbaren Anker sperrt er sofort. Sonst schaltete
+ein gelöschter Zustand den Fern-Widerruf dauerhaft ab. Ein Widerruf klebt auch
+hier. Der Preis: eine frische Installation mit einem Token, das älter als die
+Karenz ist, ist bis zum ersten erfolgreichen Heartbeat gesperrt — ein
+erneuertes Token trägt ein neues `issued_at`.
+
+**Bindung.** `pruefeBindung(nutzlast, installId)` sagt `ungebunden` · `ok` ·
+`fremd`. Kennt die Installation ihre eigene Kennung nicht, ist das `fremd`. Was
+bei `fremd` passiert, entscheidet das Produkt (melden, zählen, sperren).
+
+**Hochwassermarke.** `wirksameZeit(uhr, marke)` rechnet nie vor der Marke, die
+der Aufrufer mitbringt (etwa den spätesten Zeitstempel seiner Datenbank), und
+meldet eine zurückgestellte Uhr. Der Kern bleibt ohne Uhr und ohne Datenbank.
+
+**Offline.** `offline: true` ohne lesbaren Ablauf ist ungültig — ohne Heartbeat
+und ohne Ablauf schützte nur noch der Vertrag.
 
 ---
 

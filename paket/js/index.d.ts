@@ -27,13 +27,20 @@ export function zeitLesen(wert: unknown): Date | null;
 
 export type TokenUrteil = {
   gueltig: boolean;
-  /** `ok` · `fehlt` · `ungueltig` · `falsches_produkt` · `abgelaufen` */
+  /**
+   * `ok` · `fehlt` · `ungueltig` · `falsches_produkt` · `abgelaufen`
+   * · `offline_ohne_ablauf` (seit 0.2.0)
+   */
   grund: string;
   /** Die decodierte Nutzlast. Bei `fehlt`/`ungueltig` leer. */
   nutzlast: Record<string, unknown>;
   lizenzId: string | null;
   /** Ob der Fern-Widerruf ueberhaupt greift — steht IM signierten Token. */
   brauchtHeartbeat: boolean;
+  /** Ausdruecklich ausgestellte Offline-Lizenz (`offline: true`, seit 0.2.0). */
+  offline: boolean;
+  /** `issued_at` — ab hier zaehlt der Kunden-Modus ohne Zustand (seit 0.2.0). */
+  anker: Date | null;
 };
 
 /** Offline-Gueltigkeit: Signatur, Produkt, Ablauf. Grenzen bleiben beim Produkt. */
@@ -55,6 +62,25 @@ export type ManifestUrteil = {
   seq: number | null;
   entitlements: Record<string, unknown> | null;
 };
+
+/**
+ * Gehoert das Token zu DIESER Installation? (seit 0.2.0)
+ * `ungebunden` (keine `install_id` im Token) · `ok` · `fremd` (anders, oder die
+ * Installation kennt ihre eigene Kennung nicht).
+ */
+export function pruefeBindung(
+  nutzlast: Record<string, unknown> | null | undefined,
+  installId: string | null | undefined,
+): 'ungebunden' | 'ok' | 'fremd';
+
+/**
+ * Die Uhr, aber nie vor der Hochwassermarke des Aufrufers (seit 0.2.0). Eine
+ * zurueckgestellte Uhr wird gemeldet, nicht bestraft.
+ */
+export function wirksameZeit(
+  uhr: Date,
+  marke: Date | null | undefined,
+): { jetzt: Date; zurueckgestellt: boolean };
 
 /**
  * Das signierte Manifest bewerten. Wirft nie.
@@ -87,18 +113,32 @@ export function naechsterZustand(
   jetzt: Date,
 ): Zustand;
 
+/** Seit 0.2.0. Ohne Angabe verhaelt sich `sperrgrund` wie in 0.1. */
+export type SperrOptionen = {
+  /**
+   * Fehlender Zustand (oder einer ohne beide Anker) zaehlt die Karenz ab
+   * `anker`; ohne lesbaren Anker sofort `pruefung_ueberfaellig`.
+   */
+  kundenModus?: boolean;
+  /** In der Regel `TokenUrteil.anker`. */
+  anker?: Date | null;
+};
+
 /** `widerrufen` · `pruefung_ueberfaellig` · `""` (kein Grund zu sperren). */
 export function sperrgrund(
   zustand: Zustand | null,
   jetzt: Date,
   karenzTage: number,
   brauchtHeartbeat: boolean,
+  optionen?: SperrOptionen,
 ): string;
 
 declare const kern: {
   LizenzFehler: typeof LizenzFehler;
   zeitLesen: typeof zeitLesen;
   pruefeToken: typeof pruefeToken;
+  pruefeBindung: typeof pruefeBindung;
+  wirksameZeit: typeof wirksameZeit;
   bewerteManifest: typeof bewerteManifest;
   naechsterZustand: typeof naechsterZustand;
   sperrgrund: typeof sperrgrund;
