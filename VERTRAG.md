@@ -105,16 +105,21 @@ von 0.2.0 dasselbe wie von 0.1 — die 25 Fälle von 0.1 stehen unverändert im
 Prüfstand und sind der Beleg.
 
 **Kunden-Modus.** `sperrgrund(…, {kundenModus, anker})` (Go: `SperrgrundKunde`)
-lässt die zweite Nachsicht fallen: fehlt der Zustand — oder trägt er weder
-`letzte_ok_pruefung` noch `pending_seit` —, zählt die Karenz ab `anker`, dem
-`issued_at` des Tokens. Ohne lesbaren Anker sperrt er sofort. Sonst schaltete
-ein gelöschter Zustand den Fern-Widerruf dauerhaft ab. Ein Widerruf klebt auch
-hier. Der Preis: eine frische Installation mit einem Token, das älter als die
+lässt die zweite Nachsicht fallen: solange es keinen erfolgreichen Lauf gibt,
+zählt die Karenz ab dem **früheren** von `pending_seit` und `anker`, dem
+`issued_at` des Tokens. Ohne lesbaren Anker sperrt er sofort; eine
+`letzte_ok_pruefung` in der Zukunft gilt als fehlend. Nur ab `pending_seit` zu
+zählen reichte nicht (Durchsicht 27.10.): ein gelöschter Zustand plus ein
+gesperrter Lizenzserver setzte `pending_seit` im nächsten Lauf auf „jetzt“ und
+schenkte eine frische Karenz, beliebig oft. Ein Widerruf klebt auch hier. Was
+der Kern nicht verhindern kann: wer `letzte_ok_pruefung` regelmäßig von Hand
+auf „gerade eben“ setzt, verlängert die Karenz — der Zustand ist unsigniert. Der Preis: eine frische Installation mit einem Token, das älter als die
 Karenz ist, ist bis zum ersten erfolgreichen Heartbeat gesperrt — ein
 erneuertes Token trägt ein neues `issued_at`.
 
 **Bindung.** `pruefeBindung(nutzlast, installId)` sagt `ungebunden` · `ok` ·
-`fremd`. Kennt die Installation ihre eigene Kennung nicht, ist das `fremd`. Was
+`fremd`. Kennt die Installation ihre eigene Kennung nicht, ist das `fremd`;
+nur eine Zeichenkette im Token bindet (eine Zahl ist `fremd`). Was
 bei `fremd` passiert, entscheidet das Produkt (melden, zählen, sperren).
 
 **Hochwassermarke.** `wirksameZeit(uhr, marke)` rechnet nie vor der Marke, die

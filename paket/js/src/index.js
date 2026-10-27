@@ -138,8 +138,18 @@ function pruefeToken(token, pubkeyPem, produkt, jetzt) {
 function pruefeBindung(nutzlast, installId) {
   const soll = (nutzlast ?? {}).install_id;
   if (soll === null || soll === undefined || soll === '') return 'ungebunden';
-  if (installId === null || installId === undefined || installId === '') return 'fremd';
-  return String(soll) === String(installId) ? 'ok' : 'fremd';
+  // Nur eine Zeichenkette bindet. Eine Zahl oder Liste schriebe jede Sprache
+  // anders als Text, und die Bauarten kämen zu verschiedenen Urteilen.
+  if (typeof soll !== 'string') return 'fremd';
+  if (typeof installId !== 'string' || installId === '') return 'fremd';
+  return soll === installId ? 'ok' : 'fremd';
+}
+
+// Ein `Date`, das auch eines ist. `new Date(undefined)` ist ein Date-Objekt mit
+// NaN — jeder Vergleich damit ist falsch, und ein falscher Vergleich hiesse
+// hier „nicht abgelaufen", „nicht überfällig". Alles andere zählt als fehlend.
+function gueltigeZeit(x) {
+  return x instanceof Date && !Number.isNaN(x.getTime()) ? x : null;
 }
 
 /**
@@ -154,7 +164,8 @@ function pruefeBindung(nutzlast, installId) {
  * @returns {{jetzt: Date, zurueckgestellt: boolean}}
  */
 function wirksameZeit(uhr, marke) {
-  if (marke === null || marke === undefined || uhr >= marke) {
+  marke = gueltigeZeit(marke);
+  if (marke === null || uhr >= marke) {
     return { jetzt: uhr, zurueckgestellt: false };
   }
   return { jetzt: marke, zurueckgestellt: true };
@@ -257,11 +268,13 @@ function naechsterZustand(alt, urteil, jetzt) {
  * `null` · `'widerrufen'` · `'pruefung_ueberfaellig'`.
  *
  * KUNDEN-MODUS (seit 0.2.0, `optionen.kundenModus`): die zweite Nachsicht
- * fällt. Fehlt der Zustand — oder trägt er keinen der beiden Anker —, zählt
- * die Karenz ab `optionen.anker` (das `issued_at` des Tokens, siehe
- * `pruefeToken`). Sonst schaltete ein gelöschter Zustand den Fern-Widerruf
- * dauerhaft ab. Ohne lesbaren Anker sperrt der Kunden-Modus sofort. Ohne
- * `optionen` verhält sich alles wie in 0.1.
+ * fällt. Solange es keinen erfolgreichen Lauf gibt, zählt die Karenz ab dem
+ * FRÜHEREN von `pendingSeit` und `optionen.anker` (das `issued_at` des Tokens,
+ * siehe `pruefeToken`). Nur ab `pendingSeit` zu zählen reichte nicht: ein
+ * gelöschter Zustand plus ein gesperrter Lizenzserver setzte `pendingSeit`
+ * im nächsten Lauf auf „jetzt" und schenkte eine frische Karenz, beliebig oft.
+ * Ohne lesbaren Anker sperrt der Kunden-Modus sofort; eine `letzteOkPruefung`
+ * in der Zukunft gilt als fehlend. Ohne `optionen` verhält sich alles wie in 0.1.
  *
  * ZWEI NACHSICHTEN, beide gewollt:
  *
@@ -275,12 +288,17 @@ function naechsterZustand(alt, urteil, jetzt) {
 function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat, optionen = {}) {
   if (!brauchtHeartbeat) return null;
   const karenzMs = Math.max(0, karenzTage) * 86400000;
-  const ohneAnker = zustand === null || zustand === undefined
-    || (zustand.letzteOkPruefung == null && zustand.pendingSeit == null);
-  if (optionen.kundenModus && ohneAnker && zustand?.letzterStatus !== 'widerrufen') {
-    const anker = optionen.anker ?? null;
+  if (optionen.kundenModus) {
+    if (zustand?.letzterStatus === 'widerrufen') return 'widerrufen';
+    const ok = gueltigeZeit(zustand?.letzteOkPruefung ?? null);
+    if (ok !== null && ok <= jetzt) {
+      return (jetzt - ok) > karenzMs ? 'pruefung_ueberfaellig' : null;
+    }
+    const anker = gueltigeZeit(optionen.anker ?? null);
     if (anker === null) return 'pruefung_ueberfaellig';
-    return (jetzt - anker) > karenzMs ? 'pruefung_ueberfaellig' : null;
+    const offen = gueltigeZeit(zustand?.pendingSeit ?? null);
+    const start = offen !== null && offen < anker ? offen : anker;
+    return (jetzt - start) > karenzMs ? 'pruefung_ueberfaellig' : null;
   }
   if (zustand === null || zustand === undefined) return null;
   if (zustand.letzterStatus === 'widerrufen') return 'widerrufen';

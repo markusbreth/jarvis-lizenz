@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -176,10 +175,13 @@ func PruefeBindung(nutzlast map[string]any, installID *string) string {
 	if !da || soll == nil || soll == "" {
 		return "ungebunden"
 	}
-	if installID == nil || *installID == "" {
+	// Nur eine Zeichenkette bindet — eine Zahl oder Liste schriebe jede
+	// Sprache anders als Text, und die Bauarten kaemen zu verschiedenen Urteilen.
+	s, istText := soll.(string)
+	if !istText || installID == nil || *installID == "" {
 		return "fremd"
 	}
-	if fmt.Sprint(soll) == *installID {
+	if s == *installID {
 		return "ok"
 	}
 	return "fremd"
@@ -354,30 +356,42 @@ func Sperrgrund(zustand *Zustand, jetzt time.Time, karenzTage int,
 }
 
 // SperrgrundKunde ist Sperrgrund im KUNDEN-MODUS (seit 0.2.0): die zweite
-// Nachsicht faellt. Fehlt der Zustand — oder traegt er keinen der beiden
-// Anker —, zaehlt die Karenz ab `anker` (das `issued_at` des Tokens). Sonst
-// schaltete ein geloeschter Zustand den Fern-Widerruf dauerhaft ab. Ohne
-// lesbaren Anker sperrt der Kunden-Modus sofort. Eine eigene Funktion statt
-// eines neuen Parameters, damit kein Aufrufer von 0.1 bricht.
+// Nachsicht faellt. Solange es keinen erfolgreichen Lauf gibt, zaehlt die
+// Karenz ab dem FRUEHEREN von `PendingSeit` und `anker` (das `issued_at` des
+// Tokens). Nur ab `PendingSeit` zu zaehlen reichte nicht: ein geloeschter
+// Zustand plus ein gesperrter Lizenzserver setzte `PendingSeit` im naechsten
+// Lauf auf „jetzt" und schenkte eine frische Karenz, beliebig oft. Ohne
+// lesbaren Anker sperrt der Kunden-Modus sofort; eine `LetzteOkPruefung` in
+// der Zukunft gilt als fehlend. Eine eigene Funktion statt eines neuen
+// Parameters, damit kein Aufrufer von 0.1 bricht.
 func SperrgrundKunde(zustand *Zustand, jetzt time.Time, karenzTage int,
 	brauchtHeartbeat bool, anker *time.Time) string {
 
 	if !brauchtHeartbeat {
 		return ""
 	}
-	ohneAnker := zustand == nil ||
-		(zustand.LetzteOkPruefung == nil && zustand.PendingSeit == nil)
-	if ohneAnker && (zustand == nil || zustand.LetzterStatus != "widerrufen") {
-		if anker == nil {
-			return "pruefung_ueberfaellig"
-		}
-		if karenzTage < 0 {
-			karenzTage = 0
-		}
-		if jetzt.Sub(*anker) > time.Duration(karenzTage)*24*time.Hour {
+	if karenzTage < 0 {
+		karenzTage = 0
+	}
+	karenz := time.Duration(karenzTage) * 24 * time.Hour
+	if zustand != nil && zustand.LetzterStatus == "widerrufen" {
+		return "widerrufen"
+	}
+	if zustand != nil && zustand.LetzteOkPruefung != nil && !zustand.LetzteOkPruefung.After(jetzt) {
+		if jetzt.Sub(*zustand.LetzteOkPruefung) > karenz {
 			return "pruefung_ueberfaellig"
 		}
 		return ""
 	}
-	return Sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat)
+	if anker == nil {
+		return "pruefung_ueberfaellig"
+	}
+	start := *anker
+	if zustand != nil && zustand.PendingSeit != nil && zustand.PendingSeit.Before(start) {
+		start = *zustand.PendingSeit
+	}
+	if jetzt.Sub(start) > karenz {
+		return "pruefung_ueberfaellig"
+	}
+	return ""
 }

@@ -116,8 +116,10 @@ export function naechsterZustand(
 /** Seit 0.2.0. Ohne Angabe verhaelt sich `sperrgrund` wie in 0.1. */
 export type SperrOptionen = {
   /**
-   * Fehlender Zustand (oder einer ohne beide Anker) zaehlt die Karenz ab
-   * `anker`; ohne lesbaren Anker sofort `pruefung_ueberfaellig`.
+   * Ohne erfolgreichen Lauf zaehlt die Karenz ab dem frueheren von
+   * `pendingSeit` und `anker`; ohne gueltigen Anker (auch ein ungueltiges
+   * `Date`) sofort `pruefung_ueberfaellig`. Eine `letzteOkPruefung` in der
+   * Zukunft gilt als fehlend.
    */
   kundenModus?: boolean;
   /** In der Regel `TokenUrteil.anker`. */

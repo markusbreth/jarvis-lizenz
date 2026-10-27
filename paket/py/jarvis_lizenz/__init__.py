@@ -24,7 +24,7 @@ from typing import Any
 __all__ = [
     "LizenzFehler", "TokenUrteil", "ManifestUrteil", "Zustand",
     "pruefe_token", "bewerte_manifest", "naechster_zustand", "sperrgrund",
-    "zeit_lesen",
+    "zeit_lesen", "pruefe_bindung", "wirksame_zeit",
 ]
 
 # ── Draht ────────────────────────────────────────────────────────────────────
@@ -170,9 +170,13 @@ def pruefe_bindung(nutzlast: dict | None, install_id: Any) -> str:
     soll = (nutzlast or {}).get("install_id")
     if soll is None or soll == "":
         return "ungebunden"
-    if install_id is None or install_id == "":
+    # Nur eine Zeichenkette bindet — eine Zahl oder Liste schriebe jede Sprache
+    # anders als Text, und die Bauarten kämen zu verschiedenen Urteilen.
+    if not isinstance(soll, str):
         return "fremd"
-    return "ok" if str(soll) == str(install_id) else "fremd"
+    if not isinstance(install_id, str) or install_id == "":
+        return "fremd"
+    return "ok" if soll == install_id else "fremd"
 
 
 def wirksame_zeit(uhr: datetime, marke: datetime | None) -> tuple[datetime, bool]:
@@ -305,11 +309,14 @@ def sperrgrund(zustand: Zustand | None, jetzt: datetime, karenz_tage: int,
                anker: datetime | None = None) -> str | None:
     """`None` · `widerrufen` · `pruefung_ueberfaellig`.
 
-    KUNDEN-MODUS (seit 0.2.0): die zweite Nachsicht fällt. Fehlt der Zustand —
-    oder trägt er keinen der beiden Anker —, zählt die Karenz ab `anker` (das
-    `issued_at` des Tokens). Sonst schaltete ein gelöschter Zustand den
-    Fern-Widerruf dauerhaft ab. Ohne lesbaren Anker sperrt der Kunden-Modus
-    sofort. Ohne `kunden_modus` verhält sich alles wie in 0.1.
+    KUNDEN-MODUS (seit 0.2.0): die zweite Nachsicht fällt. Solange es keinen
+    erfolgreichen Lauf gibt, zählt die Karenz ab dem FRÜHEREN von
+    `pending_seit` und `anker` (das `issued_at` des Tokens). Nur ab
+    `pending_seit` zu zählen reichte nicht: ein gelöschter Zustand plus ein
+    gesperrter Lizenzserver setzte `pending_seit` im nächsten Lauf auf „jetzt“
+    und schenkte eine frische Karenz, beliebig oft. Ohne lesbaren Anker sperrt
+    der Kunden-Modus sofort; eine `letzte_ok_pruefung` in der Zukunft gilt als
+    fehlend. Ohne `kunden_modus` verhält sich alles wie in 0.1.
 
     ZWEI NACHSICHTEN, beide gewollt:
 
@@ -323,12 +330,17 @@ def sperrgrund(zustand: Zustand | None, jetzt: datetime, karenz_tage: int,
     if not braucht_heartbeat:
         return None
     karenz = timedelta(days=max(0, karenz_tage))
-    ohne_anker = zustand is None or (
-        zustand.letzte_ok_pruefung is None and zustand.pending_seit is None)
-    if kunden_modus and ohne_anker and (zustand is None or zustand.letzter_status != "widerrufen"):
+    if kunden_modus:
+        if zustand is not None and zustand.letzter_status == "widerrufen":
+            return "widerrufen"
+        ok = zustand.letzte_ok_pruefung if zustand is not None else None
+        if ok is not None and ok <= jetzt:
+            return "pruefung_ueberfaellig" if (jetzt - ok) > karenz else None
         if anker is None:
             return "pruefung_ueberfaellig"
-        return "pruefung_ueberfaellig" if (jetzt - anker) > karenz else None
+        offen = zustand.pending_seit if zustand is not None else None
+        start = offen if offen is not None and offen < anker else anker
+        return "pruefung_ueberfaellig" if (jetzt - start) > karenz else None
     if zustand is None:
         return None
     if zustand.letzter_status == "widerrufen":

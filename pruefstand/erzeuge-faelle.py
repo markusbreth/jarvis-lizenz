@@ -519,6 +519,65 @@ namen.append(efall(
     ue(u(True, "ok")),
     token=token(), uhr_marke=iso(JETZT - timedelta(days=1))))
 
+namen.append(efall(
+    "kunden-modus-geloescht-und-server-gesperrt",
+    "Kunden-Modus, Zustand gelöscht, Lizenzserver nicht erreichbar, Token 30 Tage alt",
+    "BEFUND DER DURCHSICHT 27.10.: der normale Ablauf ruft erst naechster_zustand, "
+    "der `pending_seit` auf „jetzt“ setzt — zählte der Kunden-Modus nur ohne "
+    "Anker ab `issued_at`, schenkten Löschen plus Blockieren des Servers eine "
+    "frische Karenz, beliebig oft. Gezählt wird ab dem früheren der beiden. "
+    "Gegenstück: geloescht-und-server-gesperrt-ohne-kunden-modus.",
+    ue(u(True, "ok", "unbekannt", "unerreichbar", "pruefung_ueberfaellig",
+         zustand(letzter_status="unbekannt", pending_seit=iso(JETZT)))),
+    token=token(), manifest=None, zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "geloescht-und-server-gesperrt-ohne-kunden-modus",
+    "Wie davor, ohne Kunden-Modus",
+    "Hält fest, was 0.1 hier tut: die Karenz beginnt neu. Das ist die Lücke, "
+    "nicht das Soll.",
+    ue(u(True, "ok", "unbekannt", "unerreichbar", None,
+         zustand(letzter_status="unbekannt", pending_seit=iso(JETZT)))),
+    token=token(), manifest=None, zustand=None))
+
+namen.append(efall(
+    "kunden-modus-pending-frueher-als-anker",
+    "Kunden-Modus, Token 3 Tage alt, seit 10 Tagen erfolglos",
+    "Ist `pending_seit` älter als `issued_at`, zählt `pending_seit` — ein neu "
+    "ausgestelltes Token setzt eine laufende Frist nicht zurück.",
+    ue(u(True, "ok", None, None, "pruefung_ueberfaellig",
+         zustand(letzter_status="unbekannt", pending_seit=iso(JETZT - timedelta(days=10))))),
+    token=token(issued_at=iso(JETZT - timedelta(days=3))),
+    zustand=zustand(letzter_status="unbekannt", pending_seit=iso(JETZT - timedelta(days=10))),
+    kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-genau-an-der-grenze",
+    "Kunden-Modus, kein Zustand, Token genau 7 Tage alt (Karenz 7)",
+    "Die Grenze selbst sperrt noch nicht (`>`, nicht `>=`) — wie bei "
+    "`letzte_ok_pruefung` in 0.1.",
+    ue(u(True, "ok", None, None, None, None)),
+    token=token(issued_at=iso(JETZT - timedelta(days=7))), zustand=None, kunden_modus=True))
+
+namen.append(efall(
+    "kunden-modus-ok-in-der-zukunft",
+    "Kunden-Modus, `letzte_ok_pruefung` 30 Tage in der Zukunft, Token 30 Tage alt",
+    "Ein Erfolg aus der Zukunft ist kein Erfolg — sonst sperrte ein von Hand "
+    "gesetzter Zeitstempel nie. Gezählt wird dann ab `issued_at`.",
+    ue(u(True, "ok", None, None, "pruefung_ueberfaellig",
+         zustand(letzter_status="aktiv", letzte_ok_pruefung=iso(JETZT + timedelta(days=30))))),
+    token=token(),
+    zustand=zustand(letzter_status="aktiv", letzte_ok_pruefung=iso(JETZT + timedelta(days=30))),
+    kunden_modus=True))
+
+namen.append(efall(
+    "bindung-zahl-im-token",
+    "Token mit `install_id: 1` (Zahl), Installation „1“",
+    "Nur eine Zeichenkette bindet. Eine Zahl schreibt jede Sprache anders als "
+    "Text (1 · 1.0 · 1e21) — die Bauarten kämen zu verschiedenen Urteilen.",
+    ue(u(True, "ok"), bindung="fremd"),
+    token=token(install_id=1), install_id="1"))
+
 print(f"{len(namen)} Fälle geschrieben nach {ZIEL}")
 for n in sorted(namen):
     print("  ", n)

@@ -1,0 +1,28 @@
+{
+  "beschreibung": "Kunden-Modus, kein Zustand, Token genau 7 Tage alt (Karenz 7)",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "kunden_modus": true,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDgtMjFUMTI6MDA6MDBaIiwibGljZW5zZV9pZCI6ImxpYy0xIiwibGljZW5zZV9zZXJ2ZXIiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZC9tLmp3cyIsInBpbmdfdXJsIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.mVQNU8JNJ_fI_C2-5kcI13NHYoOaPLy3Ozg7TAlKpSGz72UYfHf_Yw-Tzqn28c6Mlc16wjNvbdQKIl37OKFwAw",
+    "zustand": null
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "kunden-modus-genau-an-der-grenze",
+  "warum": "Die Grenze selbst sperrt noch nicht (`>`, nicht `>=`) — wie bei `letzte_ok_pruefung` in 0.1."
+}
