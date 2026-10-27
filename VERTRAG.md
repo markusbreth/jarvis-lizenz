@@ -129,6 +129,12 @@ meldet eine zurückgestellte Uhr. Der Kern bleibt ohne Uhr und ohne Datenbank.
 **Offline.** `offline: true` ohne lesbaren Ablauf ist ungültig — ohne Heartbeat
 und ohne Ablauf schützte nur noch der Vertrag.
 
+**Zeitstempel sind ISO-8601 mit `Z`.** Die Console schreibt so, und nur so lesen
+die drei Sprachen gleich: ein Datum ohne Zeitzone liest JavaScript als Ortszeit,
+Python und Go als UTC; ein Datum ohne Uhrzeit nimmt Go gar nicht an. Das ist
+Verhalten von 0.1 und bleibt (Durchsicht 27.10.2026) — wer Token oder Manifest
+ausstellt, schreibt `Z`.
+
 ---
 
 ## Was der Kern NICHT entscheidet

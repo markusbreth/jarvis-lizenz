@@ -37,10 +37,15 @@ export type TokenUrteil = {
   lizenzId: string | null;
   /** Ob der Fern-Widerruf ueberhaupt greift — steht IM signierten Token. */
   brauchtHeartbeat: boolean;
-  /** Ausdruecklich ausgestellte Offline-Lizenz (`offline: true`, seit 0.2.0). */
-  offline: boolean;
-  /** `issued_at` — ab hier zaehlt der Kunden-Modus ohne Zustand (seit 0.2.0). */
-  anker: Date | null;
+  /**
+   * Ausdruecklich ausgestellte Offline-Lizenz (`offline: true`, seit 0.2.0).
+   * Optional nur im Typ: der Kern liefert das Feld immer. Als Pflichtfeld
+   * braeche es jede selbstgebaute `TokenUrteil`-Attrappe in den Produkten bei
+   * der Uebernahme von 0.2.0 (Durchsicht 27.10.2026).
+   */
+  offline?: boolean;
+  /** `issued_at` — ab hier zaehlt der Kunden-Modus ohne Zustand (seit 0.2.0). Optional wie `offline`. */
+  anker?: Date | null;
 };
 
 /** Offline-Gueltigkeit: Signatur, Produkt, Ablauf. Grenzen bleiben beim Produkt. */

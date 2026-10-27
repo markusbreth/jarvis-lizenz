@@ -61,8 +61,9 @@ const ueberDefault: TokenUrteil = kern.pruefeToken('a.b', 'PEM', 'produkt', jetz
 const zeit: Date | null = zeitLesen('2027-01-31T00:00:00Z');
 
 // 6. Seit 0.2.0: Kunden-Modus, Bindung, Offline, Hochwassermarke.
-const offline: boolean = urteil.offline;
-const anker: Date | null = urteil.anker;
+// Beide sind im Typ optional (Attrappen in den Produkten), zur Laufzeit immer da.
+const offline: boolean = urteil.offline ?? false;
+const anker: Date | null = urteil.anker ?? null;
 const bindung: 'ungebunden' | 'ok' | 'fremd' = pruefeBindung(urteil.nutzlast, 'inst-1');
 const ohneKennung: string = pruefeBindung(urteil.nutzlast, null);
 const wirksam: { jetzt: Date; zurueckgestellt: boolean } = wirksameZeit(jetzt, zeit);
