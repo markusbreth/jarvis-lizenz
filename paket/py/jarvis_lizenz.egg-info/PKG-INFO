@@ -2,7 +2,7 @@ Metadata-Version: 2.4
 Name: jarvis-lizenz
 Version: 0.2.0
 Summary: Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe.
-License: MIT
+License: UNLICENSED — proprietär, siehe LICENSE
 Project-URL: Repository, https://github.com/markusbreth/jarvis-lizenz
 Requires-Python: >=3.11
 Requires-Dist: cryptography>=42
