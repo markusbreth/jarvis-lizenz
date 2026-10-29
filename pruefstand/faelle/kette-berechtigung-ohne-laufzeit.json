@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Berechtigung ohne `max_token_tage`",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZXJlY2h0aWd1bmciOiJleUpsZUhCcGNtVnpYMkYwSWpvaU1qQXlOeTB3TmkweU5GUXhNam93TURvd01Gb2lMQ0pwYzNOMVpXUmZZWFFpT2lJeU1ESTJMVEEyTFRJNVZERXlPakF3T2pBd1dpSXNJbXRwWkNJNkltc3hJaXdpYldGNFgzUnZhMlZ1WDNSaFoyVWlPbTUxYkd3c0luQnliMlIxWTNRaU9pSndjblZsWmkxd2NtOWtkV3QwSWl3aWNIVmlhMlY1SWpvaUxTMHRMUzFDUlVkSlRpQlFWVUpNU1VNZ1MwVlpMUzB0TFMxY2JrMURiM2RDVVZsRVN6SldkMEY1UlVGTmNsVXJhVU0wT1hGelIwRXhObGd5U1dzeGFIUnJRV0pSTDJ0Q01uZHVkelZPYUUwMVQxTnBZMWx6UFZ4dUxTMHRMUzFGVGtRZ1VGVkNURWxESUV0RldTMHRMUzB0WEc0aUxDSnlaVzVsZDE5cmFXUWlPaUpsTVNJc0luUjVjR1VpT2lKbGNtNWxkV1Z5ZFc1bmN5MWlaWEpsWTJoMGFXZDFibWNpZlEuN3BPcEwwdGJhYkFOUWlZVklFb0U5cVU3MFYzSHh2N0syT0VKT3BhYjZWc3FLaGphaXpsbDZfanE1Z21SdW9GZ2tzRFZMcm93SlhHc25YbHlNZkVKRFEiLCJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.4ZEXogA1EQ1Wr1lBVVKVAQJB84LnOqM9LYZpg2koBxji8Qn_OGUKip9wlJlv_DHUZujnP6gExHqQg_VbnjmMCQ"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "berechtigung_ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kette-berechtigung-ohne-laufzeit",
+  "warum": "Ohne erlaubte Laufzeit gibt es keine Obergrenze — also keine Berechtigung."
+}

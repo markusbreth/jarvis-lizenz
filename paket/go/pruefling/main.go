@@ -28,13 +28,14 @@ type zustandEin struct {
 }
 
 type fallEin struct {
-	Pubkey     string      `json:"pubkey"`
-	Produkt    string      `json:"produkt"`
-	Jetzt      string      `json:"jetzt"`
-	KarenzTage *int        `json:"karenz_tage"`
-	Token      *string     `json:"token"`
-	Manifest   *string     `json:"manifest"`
-	Zustand    *zustandEin `json:"zustand"`
+	// Ein PEM (wie in 0.1) oder seit 0.2.0 ein Schluesselring {kid: PEM}.
+	Pubkey     json.RawMessage `json:"pubkey"`
+	Produkt    string          `json:"produkt"`
+	Jetzt      string          `json:"jetzt"`
+	KarenzTage *int            `json:"karenz_tage"`
+	Token      *string         `json:"token"`
+	Manifest   *string         `json:"manifest"`
+	Zustand    *zustandEin     `json:"zustand"`
 	// seit 0.2.0
 	UhrMarke    *string `json:"uhr_marke"`
 	KundenModus bool    `json:"kunden_modus"`
@@ -120,7 +121,20 @@ func main() {
 	if f.Token != nil {
 		tokenText = *f.Token
 	}
-	tok := lizenz.PruefeToken(tokenText, f.Pubkey, f.Produkt, jetzt)
+	var pem string
+	var ring lizenz.Ring
+	if err := json.Unmarshal(f.Pubkey, &pem); err != nil {
+		if err := json.Unmarshal(f.Pubkey, &ring); err != nil || ring == nil {
+			fmt.Fprintln(os.Stderr, "FALL KAPUTT: 'pubkey' ist weder PEM noch Ring")
+			os.Exit(2)
+		}
+	}
+	var tok lizenz.TokenUrteil
+	if ring != nil {
+		tok = lizenz.PruefeTokenRing(tokenText, ring, f.Produkt, jetzt)
+	} else {
+		tok = lizenz.PruefeToken(tokenText, pem, f.Produkt, jetzt)
+	}
 
 	var alt *lizenz.Zustand
 	if f.Zustand != nil {
@@ -142,7 +156,12 @@ func main() {
 		if alt != nil {
 			letzteSeq = alt.ManifestSeq
 		}
-		u := lizenz.BewerteManifest(f.Manifest, f.Pubkey, tok.LizenzID(), jetzt, letzteSeq)
+		var u lizenz.ManifestUrteil
+		if ring != nil {
+			u = lizenz.BewerteManifestRing(f.Manifest, ring, tok.LizenzID(), jetzt, letzteSeq)
+		} else {
+			u = lizenz.BewerteManifest(f.Manifest, pem, tok.LizenzID(), jetzt, letzteSeq)
+		}
 		m = &u
 		basis := lizenz.Zustand{}
 		if alt != nil {

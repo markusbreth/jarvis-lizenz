@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Die Berechtigung selbst als Token vorgelegt",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJleHBpcmVzX2F0IjoiMjAyNy0wNi0yNFQxMjowMDowMFoiLCJpc3N1ZWRfYXQiOiIyMDI2LTA2LTI5VDEyOjAwOjAwWiIsImtpZCI6ImsxIiwibWF4X3Rva2VuX3RhZ2UiOjMxLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInB1YmtleSI6Ii0tLS0tQkVHSU4gUFVCTElDIEtFWS0tLS0tXG5NQ293QlFZREsyVndBeUVBTXJVK2lDNDlxc0dBMTZYMklrMWh0a0FiUS9rQjJ3bnc1TmhNNU9TaWNZcz1cbi0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLVxuIiwicmVuZXdfa2lkIjoiZTEiLCJ0eXBlIjoiZXJuZXVlcnVuZ3MtYmVyZWNodGlndW5nIn0.x2aTjJ5iEkVfDE-YV-NbNX-p1Y_h6tPNw7Z-vlYRzCY7xFL175EFOBvgLXwTxIyQcSAwd9jW42O1qqbNWM4SCQ"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "als-token-berechtigung",
+  "warum": "Die Berechtigung ist öffentlich (sie steckt in jedem erneuerten Token) und vom Hauptschlüssel signiert. Als Token wäre sie eine Lizenz für ein Jahr."
+}

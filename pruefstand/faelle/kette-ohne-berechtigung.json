@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Token vom Erneuerungsschlüssel, OHNE Berechtigung",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.DzisB0dDiakohb9ZfDiM6zERkGk5wq17EpsH5LUIeKA5_1feyML2J9qiYsCb2SiijRiG_J4IXKteark0noDrCg"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kette-ohne-berechtigung",
+  "warum": "Der Erneuerungsschlüssel allein ist nichts wert: ohne die vom Hauptschlüssel signierte Berechtigung ist er ein fremder Schlüssel."
+}

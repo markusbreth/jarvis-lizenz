@@ -21,7 +21,9 @@ import kern, {
   sperrgrund,
   wirksameZeit,
   zeitLesen,
+  BERECHTIGUNG_MAX_TAGE,
   type ManifestUrteil,
+  type Schluessel,
   type TokenUrteil,
   type Zustand,
 } from '@markusbreth/jarvis-lizenz';
@@ -71,11 +73,17 @@ const kundenSperre: string = sperrgrund(null, wirksam.jetzt, 7, heartbeat,
   { kundenModus: true, anker });
 const ueberDefaultBindung: string = kern.pruefeBindung(null, 'inst-1');
 
+// 7. Seit 0.2.0: Schluesselring statt eines PEM — fuer Token UND Manifest.
+const ring: Schluessel = { k1: 'PEM', k2: 'PEM' };
+const mitRing: TokenUrteil = pruefeToken('a.b', ring, 'produkt', jetzt);
+const manifestRing: ManifestUrteil = bewerteManifest('a.b', ring, 'lic-1', jetzt, null);
+const maxTage: number = BERECHTIGUNG_MAX_TAGE;
+
 // Alles benutzen, damit `noUnusedLocals` nicht zuschlaegt und die Zeilen
 // wirklich geprueft werden statt wegoptimiert.
 export const summe = [
   gueltig, grund, lizenzId, heartbeat, kunde, m1.status, m2.detail, seq,
   neu.letzterStatus, sperre, keinZustand, ueberDefault.gueltig, zeit,
   offline, anker, bindung, ohneKennung, wirksam.zurueckgestellt, kundenSperre,
-  ueberDefaultBindung,
+  ueberDefaultBindung, mitRing.grund, manifestRing.detail, maxTage,
 ].length;

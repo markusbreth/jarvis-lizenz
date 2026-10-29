@@ -25,6 +25,7 @@ __all__ = [
     "LizenzFehler", "TokenUrteil", "ManifestUrteil", "Zustand",
     "pruefe_token", "bewerte_manifest", "naechster_zustand", "sperrgrund",
     "zeit_lesen", "pruefe_bindung", "wirksame_zeit",
+    "SchluesselUnbekannt", "BERECHTIGUNG_MAX_TAGE",
 ]
 
 # ── Draht ────────────────────────────────────────────────────────────────────
@@ -55,24 +56,86 @@ def zeit_lesen(wert: Any) -> datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
 
 
-def _pruefe_signatur(draht: str, pubkey_pem: str) -> dict:
+class SchluesselUnbekannt(LizenzFehler):
+    """Die Nutzlast nennt ein `kid`, das im Schlüsselring nicht steht (seit 0.2.0)."""
+
+
+class _KettenFehler(LizenzFehler):
+    """Erneuerungskette richtig signiert, aber ausserhalb ihrer Berechtigung."""
+
+    def __init__(self, grund: str):
+        super().__init__(grund)
+        self.grund = grund
+
+
+# Seit 0.2.0. Eine Berechtigung für den Erneuerungsschlüssel gilt höchstens so
+# lange — 366 statt 365, damit ein Jahr mit Schalttag hineinpasst.
+BERECHTIGUNG_MAX_TAGE = 366
+
+# Signierte Objekte, die KEIN Token sind. Beide sind öffentlich (das Manifest
+# holt jede Installation, die Berechtigung steckt in jedem erneuerten Token),
+# beide tragen `product` und kein `expires_at` bzw. ein langes — als Token
+# vorgelegt wären sie eine unbefristete Lizenz ohne Heartbeat gewesen.
+_KEIN_TOKEN = ("license-manifest", "erneuerungs-berechtigung")
+
+
+def _teile(draht: str) -> tuple[bytes, bytes]:
+    teile = (draht or "").strip().split(".")
+    if len(teile) != 2 or not teile[0] or not teile[1]:
+        raise LizenzFehler("Format ist nicht nutzlast.signatur")
+    try:
+        return _b64url_dec(teile[0]), _b64url_dec(teile[1])
+    except Exception as e:
+        raise LizenzFehler(f"base64url unlesbar: {e}") from e
+
+
+def _json_objekt(roh: bytes) -> dict:
+    try:
+        nutzlast = json.loads(roh.decode("utf-8"))
+    except Exception as e:
+        raise LizenzFehler(f"Nutzlast ist kein JSON: {e}") from e
+    if not isinstance(nutzlast, dict):
+        raise LizenzFehler("Nutzlast ist kein Objekt")
+    return nutzlast
+
+
+def _pruefe_signatur(draht: str, schluessel: str | dict) -> dict:
     """`b64url(nutzlast).b64url(signatur)` → Nutzlast, oder LizenzFehler.
 
     Verifiziert wird über die DEKODIERTEN Bytes, nicht über eine
     Neuserialisierung — sonst könnten Unterschiede in Leerzeichen oder
     Schlüsselreihenfolge eine gültige Signatur brechen.
+
+    `schluessel` ist ein PEM (wie in 0.1 — ein `kid` in der Nutzlast wird dann
+    nicht gelesen) oder seit 0.2.0 ein SCHLÜSSELRING `{kid: PEM}`. Mit Ring
+    entscheidet das `kid` der Nutzlast, welcher Schlüssel prüft; ein `kid`, das
+    nicht im Ring steht, ist `SchluesselUnbekannt`. Ohne `kid` (Altbestand)
+    darf jeder Schlüssel des Rings passen.
     """
+    roh, sig = _teile(draht)
+    if not isinstance(schluessel, dict):
+        _verifiziere(roh, sig, schluessel)
+        return _json_objekt(roh)
+    nutzlast = _json_objekt(roh)
+    kid = nutzlast.get("kid")
+    if kid is None:
+        for pem in schluessel.values():
+            try:
+                _verifiziere(roh, sig, pem)
+                return nutzlast
+            except LizenzFehler:
+                pass
+        raise LizenzFehler("kein Schlüssel des Rings passt")
+    if not isinstance(kid, str) or kid not in schluessel:
+        raise SchluesselUnbekannt(f"kid {kid!r} steht nicht im Ring")
+    _verifiziere(roh, sig, schluessel[kid])
+    return nutzlast
+
+
+def _verifiziere(roh: bytes, sig: bytes, pubkey_pem: str) -> None:
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-
-    teile = (draht or "").strip().split(".")
-    if len(teile) != 2 or not teile[0] or not teile[1]:
-        raise LizenzFehler("Format ist nicht nutzlast.signatur")
-    try:
-        roh, sig = _b64url_dec(teile[0]), _b64url_dec(teile[1])
-    except Exception as e:
-        raise LizenzFehler(f"base64url unlesbar: {e}") from e
 
     # Ein kaputter oder leerer Schluessel ist ein LizenzFehler, kein roher
     # ValueError. Sonst schlaegt er beim Aufrufer als 500 durch statt als
@@ -90,13 +153,61 @@ def _pruefe_signatur(draht: str, pubkey_pem: str) -> dict:
         schluessel.verify(sig, roh)
     except InvalidSignature as e:
         raise LizenzFehler("Signatur passt nicht") from e
+
+
+def _ganz_positiv(x: Any) -> bool:
+    # Wie `Number.isInteger` in JS und die float64-Prüfung in Go: 31.0 zählt.
+    return (isinstance(x, (int, float)) and not isinstance(x, bool)
+            and x > 0 and x == int(x))
+
+
+def _kette(token: str, schluessel: str | dict, produkt: str) -> dict | None:
+    """Die Erneuerungskette (seit 0.2.0) → Nutzlast, oder None ohne Kette.
+
+    Ein Token mit `berechtigung` ist NICHT vom Hauptschlüssel signiert, sondern
+    vom Erneuerungsschlüssel des Lizenzdienstes. Die Berechtigung ist ein vom
+    Hauptschlüssel signiertes Objekt, das den Erneuerungsschlüssel nennt und
+    begrenzt: höchstens `BERECHTIGUNG_MAX_TAGE` gültig, Tokens höchstens
+    `max_token_tage` lang, nur für `product`. Ein kompromittierter Dienst kann
+    so höchstens kurze Tokens ausstellen — nie ein unbefristetes.
+
+    Die Reihenfolge der Prüfungen ist Teil des Vertrags (alle drei Bauarten
+    gleich): Signaturen → Produkt → Berechtigung → Laufzeit → Zeitfenster.
+    Gemessen wird `issued_at` des Tokens gegen das Fenster der Berechtigung,
+    nicht die Uhr: läuft die Berechtigung ab, bleiben schon ausgestellte Tokens
+    ihre kurze Laufzeit gültig, statt alle Kunden im selben Augenblick zu sperren.
+    """
+    roh, sig = _teile(token)
     try:
-        nutzlast = json.loads(roh.decode("utf-8"))
-    except Exception as e:
-        raise LizenzFehler(f"Nutzlast ist kein JSON: {e}") from e
-    if not isinstance(nutzlast, dict):
-        raise LizenzFehler("Nutzlast ist kein Objekt")
-    return nutzlast
+        vorab = _json_objekt(roh)
+    except LizenzFehler:
+        return None
+    if "berechtigung" not in vorab:
+        return None
+    b_draht = vorab["berechtigung"]
+    if not isinstance(b_draht, str):
+        raise LizenzFehler("berechtigung ist keine Zeichenkette")
+    b = _pruefe_signatur(b_draht, schluessel)
+    if b.get("type") != "erneuerungs-berechtigung":
+        raise LizenzFehler("berechtigung hat den falschen Typ")
+    if not isinstance(b.get("pubkey"), str):
+        raise LizenzFehler("berechtigung nennt keinen Schlüssel")
+    _verifiziere(roh, sig, b["pubkey"])
+
+    if b.get("product") != produkt:
+        raise _KettenFehler("falsches_produkt")
+    b_von, b_bis = zeit_lesen(b.get("issued_at")), zeit_lesen(b.get("expires_at"))
+    max_tage = b.get("max_token_tage")
+    if (b_von is None or b_bis is None or b_bis < b_von
+            or b_bis - b_von > timedelta(days=BERECHTIGUNG_MAX_TAGE)
+            or not _ganz_positiv(max_tage)):
+        raise _KettenFehler("berechtigung_ungueltig")
+    t_von, t_bis = zeit_lesen(vorab.get("issued_at")), zeit_lesen(vorab.get("expires_at"))
+    if t_von is None or t_bis is None or t_bis < t_von or t_bis - t_von > timedelta(days=max_tage):
+        raise _KettenFehler("laufzeit_ueberschritten")
+    if t_von < b_von or t_von > b_bis:
+        raise _KettenFehler("berechtigung_abgelaufen")
+    return vorab
 
 
 # ── 1. Das Token ─────────────────────────────────────────────────────────────
@@ -106,6 +217,8 @@ def _pruefe_signatur(draht: str, pubkey_pem: str) -> dict:
 class TokenUrteil:
     gueltig: bool
     # ok | fehlt | ungueltig | falsches_produkt | abgelaufen | offline_ohne_ablauf
+    # seit 0.2.0 auch: schluessel_unbekannt | berechtigung_ungueltig
+    #                  | laufzeit_ueberschritten | berechtigung_abgelaufen
     grund: str
     nutzlast: dict = field(default_factory=dict)
 
@@ -129,17 +242,28 @@ class TokenUrteil:
         return zeit_lesen(self.nutzlast.get("issued_at"))
 
 
-def pruefe_token(token: str, pubkey_pem: str, produkt: str,
+def pruefe_token(token: str, pubkey_pem: str | dict, produkt: str,
                  jetzt: datetime) -> TokenUrteil:
     """Offline-Gültigkeit: Signatur, Produkt, Ablauf. Sonst nichts.
 
     Grenzen (`max_*`) bleiben beim Produkt — sie heissen dort verschieden und
     haengen an einer Zahl, die nur das Produkt kennt.
+
+    Seit 0.2.0: `pubkey_pem` darf ein Schlüsselring `{kid: PEM}` sein, und ein
+    Token darf über eine Erneuerungskette signiert sein (siehe `_kette`).
     """
     if not (token or "").strip():
         return TokenUrteil(False, "fehlt")
     try:
-        nutzlast = _pruefe_signatur(token, pubkey_pem)
+        nutzlast = _kette(token, pubkey_pem, produkt)
+        if nutzlast is None:
+            nutzlast = _pruefe_signatur(token, pubkey_pem)
+            if nutzlast.get("type") in _KEIN_TOKEN:
+                return TokenUrteil(False, "ungueltig")
+    except SchluesselUnbekannt:
+        return TokenUrteil(False, "schluessel_unbekannt")
+    except _KettenFehler as e:
+        return TokenUrteil(False, e.grund)
     except LizenzFehler:
         return TokenUrteil(False, "ungueltig")
 
@@ -203,7 +327,7 @@ class ManifestUrteil:
     entitlements: dict | None = None
 
 
-def bewerte_manifest(roh: str | None, pubkey_pem: str, lizenz_id: str | None,
+def bewerte_manifest(roh: str | None, pubkey_pem: str | dict, lizenz_id: str | None,
                      jetzt: datetime, letzte_seq: int | None) -> ManifestUrteil:
     """Das signierte Manifest bewerten. Wirft nie.
 
@@ -217,6 +341,8 @@ def bewerte_manifest(roh: str | None, pubkey_pem: str, lizenz_id: str | None,
         return ManifestUrteil("unbekannt", "unerreichbar")
     try:
         m = _pruefe_signatur(roh, pubkey_pem)
+    except SchluesselUnbekannt:
+        return ManifestUrteil("unbekannt", "schluessel_unbekannt")
     except LizenzFehler:
         return ManifestUrteil("unbekannt", "signatur_falsch")
 

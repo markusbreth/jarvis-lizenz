@@ -1,0 +1,26 @@
+{
+  "beschreibung": "Ein gültig signiertes Manifest als Token vorgelegt",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI4VDExOjAwOjAwWiIsImxpY2Vuc2VzIjp7ImxpYy0xIjp7ImZlYXR1cmVzIjpbImFsbCJdLCJsaW1pdHMiOnt9fX0sInByb2R1Y3QiOiJwcnVlZi1wcm9kdWt0IiwicmV2b2tlZCI6W10sInNlcSI6MTAsInR5cGUiOiJsaWNlbnNlLW1hbmlmZXN0IiwidmFsaWRfdW50aWwiOiIyMDI2LTA4LTMxVDExOjAwOjAwWiJ9.FafIkUq6Ws6-wDLIi4TJ_TGyskBG8uwxC738TskpNY-VtyOhkh6c2va5-U-_nGGaDph3MiU-j9Nz3zSzzMXoBQ"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "als-token-manifest",
+  "warum": "LÜCKE DER 0.1 (gefunden 29.10.): das Manifest holt jede Installation, es trägt `product` und kein `expires_at` — als Token war es eine unbefristete Lizenz ohne Heartbeat. Gilt auch ohne Ring."
+}

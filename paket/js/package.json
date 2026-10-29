@@ -2,7 +2,8 @@
   "name": "@markusbreth/jarvis-lizenz",
   "version": "0.2.0",
   "description": "Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe.",
-  "license": "MIT",
+  "license": "UNLICENSED",
+  "private": true,
   "main": "src/index.js",
   "types": "index.d.ts",
   "exports": {

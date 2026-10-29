@@ -38,6 +38,20 @@ PUB = PRIV.public_key().public_bytes(
 # Ein zweites Paar, um „fremd signiert" zu bauen.
 FREMD = Ed25519PrivateKey.from_private_bytes(bytes(range(100, 132)))
 
+
+def pem(priv) -> str:
+    return priv.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ).decode()
+
+
+# Seit 0.2.0: der NÄCHSTE Hauptschlüssel (Rotation) und der Erneuerungsschlüssel
+# des Lizenzdienstes. Der Ring ist, was ein Image mitbringt: aktuell + nächster.
+NAECHST = Ed25519PrivateKey.from_private_bytes(bytes(range(40, 72)))
+ERNEUERUNG = Ed25519PrivateKey.from_private_bytes(bytes(range(200, 232)))
+RING = {"k1": PUB, "k2": pem(NAECHST)}
+
 PRODUKT = "pruef-produkt"
 LIZENZ = "lic-1"
 JETZT = datetime(2026, 8, 28, 12, 0, 0, tzinfo=timezone.utc)
@@ -54,6 +68,10 @@ def b64(b: bytes) -> str:
 def draht(nutzlast: dict, key=PRIV) -> str:
     roh = json.dumps(nutzlast, sort_keys=True, separators=(",", ":")).encode()
     return b64(roh) + "." + b64(key.sign(roh))
+
+
+def _nutzlast(d: str) -> str:
+    return base64.urlsafe_b64decode(d.split(".")[0] + "==").decode()
 
 
 def token(**over) -> str:
@@ -577,6 +595,234 @@ namen.append(efall(
     "Text (1 · 1.0 · 1e21) — die Bauarten kämen zu verschiedenen Urteilen.",
     ue(u(True, "ok"), bindung="fremd"),
     token=token(install_id=1), install_id="1"))
+
+# ── Seit 0.2.0: Schlüsselring (kid) und Erneuerungskette ─────────────────────
+# Die Namen beginnen absichtlich NICHT mit `token-`: anker-referenz.py vergleicht
+# genau diese Fälle mit der Referenz von 0.1, und die kennt weder Ring noch Kette.
+
+
+def berechtigung(key=PRIV, **over) -> str:
+    b = {
+        "type": "erneuerungs-berechtigung", "product": PRODUKT, "kid": "k1",
+        "renew_kid": "e1", "pubkey": pem(ERNEUERUNG),
+        "issued_at": iso(JETZT - timedelta(days=60)),
+        "expires_at": iso(JETZT + timedelta(days=300)),
+        "max_token_tage": 31,
+    }
+    b.update(over)
+    return draht(b, key)
+
+
+def erneuert(key=ERNEUERUNG, **over) -> str:
+    """Ein Token, wie der Lizenzdienst es ausstellt: 30 Tage, gebunden."""
+    p = {
+        "product": PRODUKT, "customer": "Prüfkunde", "license_id": LIZENZ,
+        "issued_at": iso(JETZT - timedelta(days=3)),
+        "expires_at": iso(JETZT + timedelta(days=27)),
+        "features": ["all"], "require_heartbeat": True, "install_id": "inst-1",
+        "license_server": "https://example.invalid/m.jws",
+        "berechtigung": berechtigung(),
+    }
+    p.update(over)
+    return draht(p, key)
+
+
+namen.append(efall(
+    "ring-kid-aktuell",
+    "Token mit `kid: k1`, Ring {k1, k2}",
+    "Der Gutfall des Rings: das `kid` wählt den Schlüssel.",
+    ue(u(True, "ok")), token=token(kid="k1"), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "ring-kid-naechster",
+    "Token mit `kid: k2`, vom nächsten Schlüssel signiert, Ring {k1, k2}",
+    "ROTATION (N4): ein Image, das den nächsten Schlüssel schon trägt, nimmt "
+    "neue Tokens an, bevor der alte Schlüssel abgelöst ist. Mit "
+    "ring-kid-aktuell zusammen: altes und neues Token gelten beide.",
+    ue(u(True, "ok")), token=draht({"product": PRODUKT, "customer": "Prüfkunde", "license_id": LIZENZ,
+           "issued_at": iso(JETZT - timedelta(days=30)),
+           "expires_at": iso(JETZT + timedelta(days=365)),
+           "features": ["all"], "require_heartbeat": True, "kid": "k2"}, NAECHST),
+    pubkey_ersatz=RING))
+
+namen.append(efall(
+    "ring-ohne-kid",
+    "Token ohne `kid` (Altbestand), Ring {k1, k2}",
+    "Tokens von vor 0.2.0 tragen kein `kid`. Sie müssen gegen den Ring gültig "
+    "bleiben — sonst sperrte das erste Image mit Ring jede laufende Lizenz.",
+    ue(u(True, "ok")), token=token(), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kid-unbekannt",
+    "Token mit `kid: k9`, das im Ring nicht steht",
+    "Abgelehnt, und zwar mit eigenem Grund: `schluessel_unbekannt` heisst „das "
+    "Image ist älter als der Schlüssel“, nicht „gefälscht“. Der Betreiber sieht "
+    "so, dass ein Update fehlt.",
+    ue(u(False, "schluessel_unbekannt")), token=token(kid="k9"), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kid-falscher-schluessel",
+    "Token nennt `kid: k2`, ist aber mit k1 signiert",
+    "Das `kid` bindet: mit Ring wird NUR der genannte Schlüssel versucht. "
+    "Probierte die Bauart alle, wäre das `kid` Dekoration.",
+    ue(u(False, "ungueltig")), token=token(kid="k2"), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "ring-fremd-signiert",
+    "Token ohne `kid`, fremd signiert, Ring {k1, k2}",
+    "Ohne `kid` darf jeder Schlüssel des Rings passen — aber nur einer des "
+    "Rings. Das Gegenstück zu ring-ohne-kid.",
+    ue(u(False, "ungueltig")),
+    token=draht({"product": PRODUKT, "license_id": LIZENZ, "expires_at": None,
+                 "require_heartbeat": True}, FREMD), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kid-mit-einzelschluessel",
+    "Token mit `kid: k1`, Aufrufer übergibt ein einzelnes PEM",
+    "Ein Produkt auf 0.1-Art (ein PEM) liest neue Tokens weiter: das `kid` "
+    "wird ohne Ring nicht gelesen.",
+    ue(u(True, "ok")), token=token(kid="k1")))
+
+namen.append(efall(
+    "kette-gueltig",
+    "Token vom Erneuerungsschlüssel, mit gültiger Berechtigung, 30 Tage, Ring",
+    "Der Gutfall der Erneuerungskette (Schicht C): der Lizenzdienst stellt "
+    "kurze Tokens aus, ohne den Hauptschlüssel zu kennen.",
+    ue(u(True, "ok")), token=erneuert(), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-mit-einzelschluessel",
+    "Dieselbe Kette, Aufrufer übergibt ein einzelnes PEM",
+    "Die Berechtigung wird mit dem Hauptschlüssel geprüft, egal ob er als Ring "
+    "oder als PEM kommt.",
+    ue(u(True, "ok")), token=erneuert()))
+
+namen.append(efall(
+    "kette-ohne-berechtigung",
+    "Token vom Erneuerungsschlüssel, OHNE Berechtigung",
+    "Der Erneuerungsschlüssel allein ist nichts wert: ohne die vom "
+    "Hauptschlüssel signierte Berechtigung ist er ein fremder Schlüssel.",
+    ue(u(False, "ungueltig")),
+    token=draht({k: v for k, v in __import__("json").loads(
+        _nutzlast(erneuert())).items() if k != "berechtigung"}, ERNEUERUNG),
+    pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-berechtigung-fremd-signiert",
+    "Berechtigung nicht vom Hauptschlüssel, sondern fremd signiert",
+    "Wer sich selbst eine Berechtigung ausstellt, stellt sich selbst Lizenzen aus.",
+    ue(u(False, "ungueltig")), token=erneuert(berechtigung=berechtigung(FREMD)),
+    pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-berechtigung-kid-unbekannt",
+    "Berechtigung nennt ein `kid`, das im Ring nicht steht",
+    "Dieselbe Regel wie beim Token: das `kid` der Berechtigung wählt den "
+    "Hauptschlüssel.",
+    ue(u(False, "schluessel_unbekannt")),
+    token=erneuert(berechtigung=berechtigung(kid="k9")), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-fremder-erneuerungsschluessel",
+    "Berechtigung gültig, Token aber nicht vom berechtigten Schlüssel signiert",
+    "Die Berechtigung nennt GENAU EINEN Schlüssel. Eine echte Berechtigung an "
+    "ein selbst signiertes Token zu hängen, darf nichts nützen — die "
+    "Berechtigung ist öffentlich, sie steckt in jedem erneuerten Token.",
+    ue(u(False, "ungueltig")), token=erneuert(key=FREMD), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-falsches-produkt",
+    "Berechtigung für ein anderes Produkt",
+    "Ein Erneuerungsschlüssel ist je Produkt berechtigt.",
+    ue(u(False, "falsches_produkt")),
+    token=erneuert(berechtigung=berechtigung(product="ein-anderes")), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-berechtigung-ueber-ein-jahr",
+    "Berechtigung 400 Tage gültig",
+    "Eine Berechtigung gilt höchstens 366 Tage — der Kern setzt das durch, "
+    "nicht die Console. Ein Fehler beim Ausstellen soll keinen Dauerschlüssel "
+    "erzeugen.",
+    ue(u(False, "berechtigung_ungueltig")),
+    token=erneuert(berechtigung=berechtigung(expires_at=iso(JETZT + timedelta(days=340)))),
+    pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-berechtigung-ohne-laufzeit",
+    "Berechtigung ohne `max_token_tage`",
+    "Ohne erlaubte Laufzeit gibt es keine Obergrenze — also keine Berechtigung.",
+    ue(u(False, "berechtigung_ungueltig")),
+    token=erneuert(berechtigung=berechtigung(max_token_tage=None)), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-laufzeit-zu-lang",
+    "Erneuertes Token 60 Tage lang, erlaubt sind 31",
+    "DER KERN DER SCHICHT C: ein kompromittierter Lizenzdienst kann höchstens "
+    "kurze Tokens ausstellen. Gegenstück: kette-gueltig (30 Tage).",
+    ue(u(False, "laufzeit_ueberschritten")),
+    token=erneuert(expires_at=iso(JETZT + timedelta(days=57))), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-ohne-ablauf",
+    "Erneuertes Token mit `expires_at: null`",
+    "Unbefristet ist für den Hauptschlüssel erlaubt (Altbestand), für den "
+    "Erneuerungsschlüssel nie.",
+    ue(u(False, "laufzeit_ueberschritten")),
+    token=erneuert(expires_at=None), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-nach-der-berechtigung",
+    "Berechtigung vor 10 Tagen abgelaufen, Token vor 3 Tagen ausgestellt",
+    "Nach Ablauf der Berechtigung stellt der Dienst nichts Gültiges mehr aus.",
+    ue(u(False, "berechtigung_abgelaufen")),
+    token=erneuert(berechtigung=berechtigung(
+        issued_at=iso(JETZT - timedelta(days=300)),
+        expires_at=iso(JETZT - timedelta(days=10)))), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "kette-letztes-token-der-berechtigung",
+    "Berechtigung vor 5 Tagen abgelaufen, Token davor (vor 6 Tagen) ausgestellt",
+    "Gemessen wird `issued_at` gegen das Fenster, nicht die Uhr: ein schon "
+    "ausgestelltes Token läuft seine kurze Zeit zu Ende, statt dass alle Kunden "
+    "im Augenblick des Ablaufs stehen. Gegenstück: kette-nach-der-berechtigung.",
+    ue(u(True, "ok")),
+    token=erneuert(issued_at=iso(JETZT - timedelta(days=6)),
+                   expires_at=iso(JETZT + timedelta(days=24)),
+                   berechtigung=berechtigung(
+                       issued_at=iso(JETZT - timedelta(days=300)),
+                       expires_at=iso(JETZT - timedelta(days=5)))), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "als-token-manifest",
+    "Ein gültig signiertes Manifest als Token vorgelegt",
+    "LÜCKE DER 0.1 (gefunden 29.10.): das Manifest holt jede Installation, es "
+    "trägt `product` und kein `expires_at` — als Token war es eine unbefristete "
+    "Lizenz ohne Heartbeat. Gilt auch ohne Ring.",
+    ue(u(False, "ungueltig")), token=manifest()))
+
+namen.append(efall(
+    "als-token-berechtigung",
+    "Die Berechtigung selbst als Token vorgelegt",
+    "Die Berechtigung ist öffentlich (sie steckt in jedem erneuerten Token) und "
+    "vom Hauptschlüssel signiert. Als Token wäre sie eine Lizenz für ein Jahr.",
+    ue(u(False, "ungueltig")), token=berechtigung(), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "ring-manifest-naechster",
+    "Manifest mit `kid: k2`, vom nächsten Schlüssel signiert, Ring",
+    "Auch das Manifest rotiert — sonst stünde nach dem Wechsel jeder Widerruf "
+    "still (signatur_falsch = unbekannt = Karenz).",
+    ue(u(True, "ok", "aktiv", "ok", None,
+         zustand(letzter_status="aktiv", letzte_ok_pruefung=iso(JETZT), manifest_seq=10))),
+    token=token(), manifest=manifest(NAECHST, kid="k2"), zustand=None, pubkey_ersatz=RING))
+
+namen.append(efall(
+    "ring-manifest-kid-unbekannt",
+    "Manifest mit `kid: k9`, Ring",
+    "Unbekannt wie jede Störung — die Karenz greift, gesperrt wird nicht.",
+    ue(u(True, "ok", "unbekannt", "schluessel_unbekannt", None,
+         zustand(letzter_status="unbekannt", pending_seit=iso(JETZT)))),
+    token=token(), manifest=manifest(kid="k9"), zustand=None, pubkey_ersatz=RING))
 
 print(f"{len(namen)} Fälle geschrieben nach {ZIEL}")
 for n in sorted(namen):

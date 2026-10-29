@@ -22,6 +22,19 @@
 /** Der Fehler, den `_pruefeSignatur` wirft. Alle oeffentlichen Funktionen fangen ihn. */
 export class LizenzFehler extends Error {}
 
+/** Die Nutzlast nennt ein `kid`, das im Schluesselring nicht steht (seit 0.2.0). */
+export class SchluesselUnbekannt extends LizenzFehler {}
+
+/** Hoechste Gueltigkeit einer Berechtigung fuer den Erneuerungsschluessel, in Tagen (seit 0.2.0). */
+export const BERECHTIGUNG_MAX_TAGE: number;
+
+/**
+ * Ein PEM (wie in 0.1 — ein `kid` in der Nutzlast wird dann nicht gelesen)
+ * oder seit 0.2.0 ein Schluesselring `{kid: PEM}`: das `kid` der Nutzlast
+ * waehlt den Schluessel, ohne `kid` darf jeder des Rings passen.
+ */
+export type Schluessel = string | Record<string, string>;
+
 /** ISO-8601 lesen; `null` bei fehlendem oder unlesbarem Wert. */
 export function zeitLesen(wert: unknown): Date | null;
 
@@ -29,7 +42,8 @@ export type TokenUrteil = {
   gueltig: boolean;
   /**
    * `ok` · `fehlt` · `ungueltig` · `falsches_produkt` · `abgelaufen`
-   * · `offline_ohne_ablauf` (seit 0.2.0)
+   * · `offline_ohne_ablauf` · `schluessel_unbekannt` · `berechtigung_ungueltig`
+   * · `laufzeit_ueberschritten` · `berechtigung_abgelaufen` (alle seit 0.2.0)
    */
   grund: string;
   /** Die decodierte Nutzlast. Bei `fehlt`/`ungueltig` leer. */
@@ -51,7 +65,7 @@ export type TokenUrteil = {
 /** Offline-Gueltigkeit: Signatur, Produkt, Ablauf. Grenzen bleiben beim Produkt. */
 export function pruefeToken(
   token: string,
-  pubkeyPem: string,
+  pubkeyPem: Schluessel,
   produkt: string,
   jetzt: Date,
 ): TokenUrteil;
@@ -62,6 +76,7 @@ export type ManifestUrteil = {
   /**
    * `ok` · `widerrufen` · `unerreichbar` · `signatur_falsch` · `kein_manifest`
    * · `veraltet` · `rueckrollung` · `nicht_aufgefuehrt` · `keine_lizenz_id`
+   * · `schluessel_unbekannt` (seit 0.2.0)
    */
   detail: string;
   seq: number | null;
@@ -95,7 +110,7 @@ export function wirksameZeit(
  */
 export function bewerteManifest(
   roh: string | null | undefined,
-  pubkeyPem: string,
+  pubkeyPem: Schluessel,
   lizenzId: string | null,
   jetzt: Date,
   letzteSeq: number | null,
@@ -142,6 +157,8 @@ export function sperrgrund(
 
 declare const kern: {
   LizenzFehler: typeof LizenzFehler;
+  SchluesselUnbekannt: typeof SchluesselUnbekannt;
+  BERECHTIGUNG_MAX_TAGE: number;
   zeitLesen: typeof zeitLesen;
   pruefeToken: typeof pruefeToken;
   pruefeBindung: typeof pruefeBindung;

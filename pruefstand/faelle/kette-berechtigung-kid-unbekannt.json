@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Berechtigung nennt ein `kid`, das im Ring nicht steht",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZXJlY2h0aWd1bmciOiJleUpsZUhCcGNtVnpYMkYwSWpvaU1qQXlOeTB3TmkweU5GUXhNam93TURvd01Gb2lMQ0pwYzNOMVpXUmZZWFFpT2lJeU1ESTJMVEEyTFRJNVZERXlPakF3T2pBd1dpSXNJbXRwWkNJNkltczVJaXdpYldGNFgzUnZhMlZ1WDNSaFoyVWlPak14TENKd2NtOWtkV04wSWpvaWNISjFaV1l0Y0hKdlpIVnJkQ0lzSW5CMVltdGxlU0k2SWkwdExTMHRRa1ZIU1U0Z1VGVkNURWxESUV0RldTMHRMUzB0WEc1TlEyOTNRbEZaUkVzeVZuZEJlVVZCVFhKVksybERORGx4YzBkQk1UWllNa2xyTVdoMGEwRmlVUzlyUWpKM2JuYzFUbWhOTlU5VGFXTlpjejFjYmkwdExTMHRSVTVFSUZCVlFreEpReUJMUlZrdExTMHRMVnh1SWl3aWNtVnVaWGRmYTJsa0lqb2laVEVpTENKMGVYQmxJam9pWlhKdVpYVmxjblZ1WjNNdFltVnlaV05vZEdsbmRXNW5JbjAuOGJ4bW5idUt1empuQjVBbWZaWlF6QmxFQm9aODNEMC1ldEdTLWJUdjZYanhReHlHNHVUZlBWVFJKeUhiaGxTU1VzUzFqV0ljYm5HWWlQNlVSYkh6QlEiLCJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.elAUascqW0s4C2Izn02-0w7ffZQglT9v2OlRTAgRwICsjnNRuVvCffr0vImdrA0ylZ7ZLLIKm-bNd5NL_60VBA"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "schluessel_unbekannt",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kette-berechtigung-kid-unbekannt",
+  "warum": "Dieselbe Regel wie beim Token: das `kid` der Berechtigung wählt den Hauptschlüssel."
+}

@@ -1,0 +1,26 @@
+{
+  "beschreibung": "Dieselbe Kette, Aufrufer übergibt ein einzelnes PEM",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+    "token": "eyJiZXJlY2h0aWd1bmciOiJleUpsZUhCcGNtVnpYMkYwSWpvaU1qQXlOeTB3TmkweU5GUXhNam93TURvd01Gb2lMQ0pwYzNOMVpXUmZZWFFpT2lJeU1ESTJMVEEyTFRJNVZERXlPakF3T2pBd1dpSXNJbXRwWkNJNkltc3hJaXdpYldGNFgzUnZhMlZ1WDNSaFoyVWlPak14TENKd2NtOWtkV04wSWpvaWNISjFaV1l0Y0hKdlpIVnJkQ0lzSW5CMVltdGxlU0k2SWkwdExTMHRRa1ZIU1U0Z1VGVkNURWxESUV0RldTMHRMUzB0WEc1TlEyOTNRbEZaUkVzeVZuZEJlVVZCVFhKVksybERORGx4YzBkQk1UWllNa2xyTVdoMGEwRmlVUzlyUWpKM2JuYzFUbWhOTlU5VGFXTlpjejFjYmkwdExTMHRSVTVFSUZCVlFreEpReUJMUlZrdExTMHRMVnh1SWl3aWNtVnVaWGRmYTJsa0lqb2laVEVpTENKMGVYQmxJam9pWlhKdVpYVmxjblZ1WjNNdFltVnlaV05vZEdsbmRXNW5JbjAueDJhVGpKNWlFa1ZmREUtWVYtTmJOWC1wMVlfaDZ0UE53N1otdmxZUnpDWTd4RkwxNzVFRk9CdmdMWHdUeEl5UWNTQXdkOWpXNDJPMXFxYk5XTTRTQ1EiLCJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.K8fifdJV2JhZ2gvZFBUwaOILQrtyDyeGpBdLcv80OOrXWSFDex12tWxk5lQ8xfYwVT7JyU_BCKCujoOvVaYmBQ"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "kette-mit-einzelschluessel",
+  "warum": "Die Berechtigung wird mit dem Hauptschlüssel geprüft, egal ob er als Ring oder als PEM kommt."
+}

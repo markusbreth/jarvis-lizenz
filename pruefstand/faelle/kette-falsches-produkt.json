@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Berechtigung für ein anderes Produkt",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZXJlY2h0aWd1bmciOiJleUpsZUhCcGNtVnpYMkYwSWpvaU1qQXlOeTB3TmkweU5GUXhNam93TURvd01Gb2lMQ0pwYzNOMVpXUmZZWFFpT2lJeU1ESTJMVEEyTFRJNVZERXlPakF3T2pBd1dpSXNJbXRwWkNJNkltc3hJaXdpYldGNFgzUnZhMlZ1WDNSaFoyVWlPak14TENKd2NtOWtkV04wSWpvaVpXbHVMV0Z1WkdWeVpYTWlMQ0p3ZFdKclpYa2lPaUl0TFMwdExVSkZSMGxPSUZCVlFreEpReUJMUlZrdExTMHRMVnh1VFVOdmQwSlJXVVJMTWxaM1FYbEZRVTF5VlN0cFF6UTVjWE5IUVRFMldESkphekZvZEd0QllsRXZhMEl5ZDI1M05VNW9UVFZQVTJsaldYTTlYRzR0TFMwdExVVk9SQ0JRVlVKTVNVTWdTMFZaTFMwdExTMWNiaUlzSW5KbGJtVjNYMnRwWkNJNkltVXhJaXdpZEhsd1pTSTZJbVZ5Ym1WMVpYSjFibWR6TFdKbGNtVmphSFJwWjNWdVp5SjkuMGNxaGxvcWhmbHAyYmY2a2ptbjRTeWMzS2E0MDhrX3lteldYZHItYkV2MmlzeUJOcDMtbmxxSldraWZETHRHdlA0YUpMTXVSY3o5U1dlWk1vZTVNQnciLCJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.xY8GkNRhLgwGmvha2l3OP_es88xkxVhq6MmW4HST0JFqstzomLBnnCbbE39fUFDR-avSacrGACoq4Z8L5LV5Dw"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "falsches_produkt",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kette-falsches-produkt",
+  "warum": "Ein Erneuerungsschlüssel ist je Produkt berechtigt."
+}

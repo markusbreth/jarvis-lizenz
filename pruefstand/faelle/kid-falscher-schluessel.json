@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Token nennt `kid: k2`, ist aber mit k1 signiert",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwia2lkIjoiazIiLCJsaWNlbnNlX2lkIjoibGljLTEiLCJsaWNlbnNlX3NlcnZlciI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL20uandzIiwicGluZ191cmwiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZCIsInByb2R1Y3QiOiJwcnVlZi1wcm9kdWt0IiwicmVxdWlyZV9oZWFydGJlYXQiOnRydWV9.UPJhwXE5nWHSvG0nKNIDfDMOuHLHSl5osTKuR-Xq3x4rbEs6-WBGl0dAJDVq-0QksSo_lIPq9xGzJioBHfoMBw"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kid-falscher-schluessel",
+  "warum": "Das `kid` bindet: mit Ring wird NUR der genannte Schlüssel versucht. Probierte die Bauart alle, wäre das `kid` Dekoration."
+}
