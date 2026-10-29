@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Token mit `kid: k1`, Ring {k1, k2}",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwia2lkIjoiazEiLCJsaWNlbnNlX2lkIjoibGljLTEiLCJsaWNlbnNlX3NlcnZlciI6Imh0dHBzOi8vZXhhbXBsZS5pbnZhbGlkL20uandzIiwicGluZ191cmwiOiJodHRwczovL2V4YW1wbGUuaW52YWxpZCIsInByb2R1Y3QiOiJwcnVlZi1wcm9kdWt0IiwicmVxdWlyZV9oZWFydGJlYXQiOnRydWV9.su4SJIL4H92FCY6_PZHpkxR7NYMuNHXESbc6qE4kxur1otbSp4-V01fnPtp5NZLOpPamc2zRTs3IMBdQ6L-qAA"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "ring-kid-aktuell",
+  "warum": "Der Gutfall des Rings: das `kid` wählt den Schlüssel."
+}

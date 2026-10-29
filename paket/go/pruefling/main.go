@@ -28,13 +28,25 @@ type zustandEin struct {
 }
 
 type fallEin struct {
-	Pubkey     string      `json:"pubkey"`
-	Produkt    string      `json:"produkt"`
-	Jetzt      string      `json:"jetzt"`
-	KarenzTage *int        `json:"karenz_tage"`
-	Token      *string     `json:"token"`
-	Manifest   *string     `json:"manifest"`
-	Zustand    *zustandEin `json:"zustand"`
+	// Ein PEM (wie in 0.1) oder seit 0.2.0 ein Schluesselring {kid: PEM}.
+	Pubkey     json.RawMessage `json:"pubkey"`
+	Produkt    string          `json:"produkt"`
+	Jetzt      string          `json:"jetzt"`
+	KarenzTage *int            `json:"karenz_tage"`
+	Token      *string         `json:"token"`
+	Manifest   *string         `json:"manifest"`
+	Zustand    *zustandEin     `json:"zustand"`
+	// seit 0.2.0
+	UhrMarke    *string `json:"uhr_marke"`
+	KundenModus bool    `json:"kunden_modus"`
+	InstallID   *string `json:"install_id"`
+	Erweitert   bool    `json:"erweitert"`
+}
+
+type erweiterungAus struct {
+	Bindung            *string `json:"bindung"`
+	Offline            bool    `json:"offline"`
+	UhrZurueckgestellt bool    `json:"uhr_zurueckgestellt"`
 }
 
 type zustandAus struct {
@@ -51,6 +63,9 @@ type urteilAus struct {
 	ManifestDetail *string     `json:"manifest_detail"`
 	Zustand        *zustandAus `json:"zustand"`
 	Sperrgrund     *string     `json:"sperrgrund"`
+	// Nur, wenn der Fall sie erfragt (`erweitert`) — so bleiben die Faelle von
+	// 0.1 Byte fuer Byte, was sie waren.
+	Erweiterung *erweiterungAus `json:"erweiterung,omitempty"`
 }
 
 // ISO mit `Z`, ohne Bruchteile — wie die Python-Bauart sie schreibt. Eine andere
@@ -96,16 +111,30 @@ func main() {
 	}
 	_, manifestDa := frei["manifest"]
 
-	jetzt, gut := lizenz.ZeitLesen(f.Jetzt)
+	uhr, gut := lizenz.ZeitLesen(f.Jetzt)
 	if !gut {
 		fmt.Fprintln(os.Stderr, "FALL KAPUTT: 'jetzt' ist nicht lesbar")
 		os.Exit(2)
 	}
+	jetzt, zurueckgestellt := lizenz.WirksameZeit(uhr, zeigerZeit(f.UhrMarke))
 	tokenText := ""
 	if f.Token != nil {
 		tokenText = *f.Token
 	}
-	tok := lizenz.PruefeToken(tokenText, f.Pubkey, f.Produkt, jetzt)
+	var pem string
+	var ring lizenz.Ring
+	if err := json.Unmarshal(f.Pubkey, &pem); err != nil {
+		if err := json.Unmarshal(f.Pubkey, &ring); err != nil || ring == nil {
+			fmt.Fprintln(os.Stderr, "FALL KAPUTT: 'pubkey' ist weder PEM noch Ring")
+			os.Exit(2)
+		}
+	}
+	var tok lizenz.TokenUrteil
+	if ring != nil {
+		tok = lizenz.PruefeTokenRing(tokenText, ring, f.Produkt, jetzt)
+	} else {
+		tok = lizenz.PruefeToken(tokenText, pem, f.Produkt, jetzt)
+	}
 
 	var alt *lizenz.Zustand
 	if f.Zustand != nil {
@@ -127,7 +156,12 @@ func main() {
 		if alt != nil {
 			letzteSeq = alt.ManifestSeq
 		}
-		u := lizenz.BewerteManifest(f.Manifest, f.Pubkey, tok.LizenzID(), jetzt, letzteSeq)
+		var u lizenz.ManifestUrteil
+		if ring != nil {
+			u = lizenz.BewerteManifestRing(f.Manifest, ring, tok.LizenzID(), jetzt, letzteSeq)
+		} else {
+			u = lizenz.BewerteManifest(f.Manifest, pem, tok.LizenzID(), jetzt, letzteSeq)
+		}
 		m = &u
 		basis := lizenz.Zustand{}
 		if alt != nil {
@@ -141,7 +175,12 @@ func main() {
 	if f.KarenzTage != nil {
 		karenz = *f.KarenzTage
 	}
-	grund := lizenz.Sperrgrund(neu, jetzt, karenz, tok.BrauchtHeartbeat())
+	var grund string
+	if f.KundenModus {
+		grund = lizenz.SperrgrundKunde(neu, jetzt, karenz, tok.BrauchtHeartbeat(), tok.Anker())
+	} else {
+		grund = lizenz.Sperrgrund(neu, jetzt, karenz, tok.BrauchtHeartbeat())
+	}
 
 	aus := urteilAus{TokenGueltig: tok.Gueltig, TokenGrund: tok.Grund}
 	if m != nil {
@@ -162,6 +201,15 @@ func main() {
 	}
 	if grund != "" {
 		aus.Sperrgrund = &grund
+	}
+
+	if f.Erweitert {
+		e := erweiterungAus{Offline: tok.Offline(), UhrZurueckgestellt: zurueckgestellt}
+		if _, da := frei["install_id"]; da {
+			b := lizenz.PruefeBindung(tok.Nutzlast, f.InstallID)
+			e.Bindung = &b
+		}
+		aus.Erweiterung = &e
 	}
 
 	b, _ := json.Marshal(aus)

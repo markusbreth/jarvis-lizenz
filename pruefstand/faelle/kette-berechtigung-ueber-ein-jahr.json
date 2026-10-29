@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Berechtigung 400 Tage gültig",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZXJlY2h0aWd1bmciOiJleUpsZUhCcGNtVnpYMkYwSWpvaU1qQXlOeTB3T0Mwd00xUXhNam93TURvd01Gb2lMQ0pwYzNOMVpXUmZZWFFpT2lJeU1ESTJMVEEyTFRJNVZERXlPakF3T2pBd1dpSXNJbXRwWkNJNkltc3hJaXdpYldGNFgzUnZhMlZ1WDNSaFoyVWlPak14TENKd2NtOWtkV04wSWpvaWNISjFaV1l0Y0hKdlpIVnJkQ0lzSW5CMVltdGxlU0k2SWkwdExTMHRRa1ZIU1U0Z1VGVkNURWxESUV0RldTMHRMUzB0WEc1TlEyOTNRbEZaUkVzeVZuZEJlVVZCVFhKVksybERORGx4YzBkQk1UWllNa2xyTVdoMGEwRmlVUzlyUWpKM2JuYzFUbWhOTlU5VGFXTlpjejFjYmkwdExTMHRSVTVFSUZCVlFreEpReUJMUlZrdExTMHRMVnh1SWl3aWNtVnVaWGRmYTJsa0lqb2laVEVpTENKMGVYQmxJam9pWlhKdVpYVmxjblZ1WjNNdFltVnlaV05vZEdsbmRXNW5JbjAuQVZpU0N6RDQ3RWl5U280OEdod1RwOWxDTnF0MXhwTklJRW0wYjJoejBqLTQ2QlZLcXFIOF9hbFM3blNYcmtIb193RTlMSkRENEMtZ3g3dEdzVmYyQlEiLCJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjYtMDktMjRUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImluc3RhbGxfaWQiOiJpbnN0LTEiLCJpc3N1ZWRfYXQiOiIyMDI2LTA4LTI1VDEyOjAwOjAwWiIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsImxpY2Vuc2Vfc2VydmVyIjoiaHR0cHM6Ly9leGFtcGxlLmludmFsaWQvbS5qd3MiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.p83WtrhU4fdbux2J0ErBqAk9Nkrn-P7qBb2VL4oGf6ipqGNVG74rkxdT-8jKrLqWcirASZPArFIzzzo-8rIRDg"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "berechtigung_ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "kette-berechtigung-ueber-ein-jahr",
+  "warum": "Eine Berechtigung gilt höchstens 366 Tage — der Kern setzt das durch, nicht die Console. Ein Fehler beim Ausstellen soll keinen Dauerschlüssel erzeugen."
+}

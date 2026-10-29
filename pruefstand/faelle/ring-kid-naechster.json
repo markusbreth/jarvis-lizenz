@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Token mit `kid: k2`, vom nächsten Schlüssel signiert, Ring {k1, k2}",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJjdXN0b21lciI6IlByXHUwMGZjZmt1bmRlIiwiZXhwaXJlc19hdCI6IjIwMjctMDgtMjhUMTI6MDA6MDBaIiwiZmVhdHVyZXMiOlsiYWxsIl0sImlzc3VlZF9hdCI6IjIwMjYtMDctMjlUMTI6MDA6MDBaIiwia2lkIjoiazIiLCJsaWNlbnNlX2lkIjoibGljLTEiLCJwcm9kdWN0IjoicHJ1ZWYtcHJvZHVrdCIsInJlcXVpcmVfaGVhcnRiZWF0Ijp0cnVlfQ.4N4I88S-ghGad8zeO0Qs8QC505C530cR3kyIalYDNpqUS3od8cPlN1zwNq9gQsiid8wez2F8eD9k-JtBCTDJDw"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "ring-kid-naechster",
+  "warum": "ROTATION (N4): ein Image, das den nächsten Schlüssel schon trägt, nimmt neue Tokens an, bevor der alte Schlüssel abgelöst ist. Mit ring-kid-aktuell zusammen: altes und neues Token gelten beide."
+}

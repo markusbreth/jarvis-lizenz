@@ -22,6 +22,23 @@
 const { createPublicKey, verify: edVerify } = require('node:crypto');
 
 class LizenzFehler extends Error {}
+/** Die Nutzlast nennt ein `kid`, das im Schlüsselring nicht steht (seit 0.2.0). */
+class SchluesselUnbekannt extends LizenzFehler {}
+/** Erneuerungskette richtig signiert, aber außerhalb ihrer Berechtigung. */
+class KettenFehler extends LizenzFehler {
+  constructor(grund) { super(grund); this.grund = grund; }
+}
+
+// Seit 0.2.0. Eine Berechtigung für den Erneuerungsschlüssel gilt höchstens so
+// lange — 366 statt 365, damit ein Jahr mit Schalttag hineinpasst.
+const BERECHTIGUNG_MAX_TAGE = 366;
+const TAG_MS = 86400000;
+
+// Signierte Objekte, die KEIN Token sind. Beide sind öffentlich (das Manifest
+// holt jede Installation, die Berechtigung steckt in jedem erneuerten Token),
+// beide tragen `product` und kein `expires_at` bzw. ein langes — als Token
+// vorgelegt wären sie eine unbefristete Lizenz ohne Heartbeat gewesen.
+const KEIN_TOKEN = ['license-manifest', 'erneuerungs-berechtigung'];
 
 function b64urlDec(s) {
   return Buffer.from(s + '='.repeat((4 - (s.length % 4)) % 4), 'base64url');
@@ -41,33 +58,19 @@ function zeitLesen(wert) {
   return Number.isNaN(t) ? null : new Date(t);
 }
 
-/**
- * `b64url(nutzlast).b64url(signatur)` → Nutzlast, oder LizenzFehler.
- *
- * Verifiziert wird über die DEKODIERTEN Bytes, nicht über eine
- * Neuserialisierung — sonst könnten Unterschiede in Leerzeichen oder
- * Schlüsselreihenfolge eine gültige Signatur brechen.
- */
-function pruefeSignatur(draht, pubkeyPem) {
-  const teile = String(draht ?? '').trim().split('.');
-  if (teile.length !== 2 || !teile[0] || !teile[1]) {
+function teile(draht) {
+  const t = String(draht ?? '').trim().split('.');
+  if (t.length !== 2 || !t[0] || !t[1]) {
     throw new LizenzFehler('Format ist nicht nutzlast.signatur');
   }
-  let roh, sig;
   try {
-    roh = b64urlDec(teile[0]);
-    sig = b64urlDec(teile[1]);
+    return [b64urlDec(t[0]), b64urlDec(t[1])];
   } catch (e) {
     throw new LizenzFehler(`base64url unlesbar: ${e.message}`);
   }
-  let key;
-  try {
-    key = createPublicKey(pubkeyPem);
-  } catch (e) {
-    throw new LizenzFehler(`kein lesbarer Schlüssel: ${e.message}`);
-  }
-  if (!edVerify(null, roh, key, sig)) throw new LizenzFehler('Signatur passt nicht');
+}
 
+function jsonObjekt(roh) {
   let nutzlast;
   try {
     nutzlast = JSON.parse(roh.toString('utf-8'));
@@ -80,27 +83,146 @@ function pruefeSignatur(draht, pubkeyPem) {
   return nutzlast;
 }
 
+const istRing = (s) => s !== null && typeof s === 'object' && !Array.isArray(s);
+
+/**
+ * `b64url(nutzlast).b64url(signatur)` → Nutzlast, oder LizenzFehler.
+ *
+ * Verifiziert wird über die DEKODIERTEN Bytes, nicht über eine
+ * Neuserialisierung — sonst könnten Unterschiede in Leerzeichen oder
+ * Schlüsselreihenfolge eine gültige Signatur brechen.
+ *
+ * `schluessel` ist ein PEM (wie in 0.1 — ein `kid` in der Nutzlast wird dann
+ * nicht gelesen) oder seit 0.2.0 ein SCHLÜSSELRING `{kid: PEM}`. Mit Ring
+ * entscheidet das `kid` der Nutzlast, welcher Schlüssel prüft; ein `kid`, das
+ * nicht im Ring steht, ist `SchluesselUnbekannt`. Ohne `kid` (Altbestand) darf
+ * jeder Schlüssel des Rings passen.
+ */
+function pruefeSignatur(draht, schluessel) {
+  const [roh, sig] = teile(draht);
+  if (!istRing(schluessel)) {
+    verifiziere(roh, sig, schluessel);
+    return jsonObjekt(roh);
+  }
+  const nutzlast = jsonObjekt(roh);
+  const kid = nutzlast.kid;
+  if (kid === null || kid === undefined) {
+    for (const pem of Object.values(schluessel)) {
+      try {
+        verifiziere(roh, sig, pem);
+        return nutzlast;
+      } catch { /* nächster Schlüssel */ }
+    }
+    throw new LizenzFehler('kein Schlüssel des Rings passt');
+  }
+  if (typeof kid !== 'string' || !Object.prototype.hasOwnProperty.call(schluessel, kid)) {
+    throw new SchluesselUnbekannt(`kid ${JSON.stringify(kid)} steht nicht im Ring`);
+  }
+  verifiziere(roh, sig, schluessel[kid]);
+  return nutzlast;
+}
+
+function verifiziere(roh, sig, pubkeyPem) {
+  let key;
+  try {
+    key = createPublicKey(pubkeyPem);
+  } catch (e) {
+    throw new LizenzFehler(`kein lesbarer Schlüssel: ${e.message}`);
+  }
+  if (!edVerify(null, roh, key, sig)) throw new LizenzFehler('Signatur passt nicht');
+}
+
+// Wie `_ganz_positiv` in Python und die float64-Prüfung in Go: 31.0 zählt.
+const ganzPositiv = (x) => typeof x === 'number' && Number.isInteger(x) && x > 0;
+
+/**
+ * Die Erneuerungskette (seit 0.2.0) → Nutzlast, oder `null` ohne Kette.
+ *
+ * Ein Token mit `berechtigung` ist NICHT vom Hauptschlüssel signiert, sondern
+ * vom Erneuerungsschlüssel des Lizenzdienstes. Die Berechtigung ist ein vom
+ * Hauptschlüssel signiertes Objekt, das den Erneuerungsschlüssel nennt und
+ * begrenzt: höchstens `BERECHTIGUNG_MAX_TAGE` gültig, Tokens höchstens
+ * `max_token_tage` lang, nur für `product`. Ein kompromittierter Dienst kann so
+ * höchstens kurze Tokens ausstellen — nie ein unbefristetes.
+ *
+ * Die Reihenfolge der Prüfungen ist Teil des Vertrags (alle drei Bauarten
+ * gleich): Signaturen → Produkt → Berechtigung → Laufzeit → Zeitfenster.
+ * Gemessen wird `issued_at` des Tokens gegen das Fenster der Berechtigung,
+ * nicht die Uhr: läuft die Berechtigung ab, bleiben schon ausgestellte Tokens
+ * ihre kurze Laufzeit gültig, statt alle Kunden im selben Augenblick zu sperren.
+ */
+function kette(token, schluessel, produkt) {
+  const [roh, sig] = teile(token);
+  let vorab;
+  try {
+    vorab = jsonObjekt(roh);
+  } catch {
+    return null;
+  }
+  if (!Object.prototype.hasOwnProperty.call(vorab, 'berechtigung')) return null;
+  const bDraht = vorab.berechtigung;
+  if (typeof bDraht !== 'string') throw new LizenzFehler('berechtigung ist keine Zeichenkette');
+  const b = pruefeSignatur(bDraht, schluessel);
+  if (b.type !== 'erneuerungs-berechtigung') throw new LizenzFehler('berechtigung hat den falschen Typ');
+  if (typeof b.pubkey !== 'string') throw new LizenzFehler('berechtigung nennt keinen Schlüssel');
+  verifiziere(roh, sig, b.pubkey);
+
+  if (b.product !== produkt) throw new KettenFehler('falsches_produkt');
+  const bVon = zeitLesen(b.issued_at);
+  const bBis = zeitLesen(b.expires_at);
+  const maxTage = b.max_token_tage;
+  if (bVon === null || bBis === null || bBis < bVon
+      || bBis - bVon > BERECHTIGUNG_MAX_TAGE * TAG_MS || !ganzPositiv(maxTage)) {
+    throw new KettenFehler('berechtigung_ungueltig');
+  }
+  const tVon = zeitLesen(vorab.issued_at);
+  const tBis = zeitLesen(vorab.expires_at);
+  if (tVon === null || tBis === null || tBis < tVon || tBis - tVon > maxTage * TAG_MS) {
+    throw new KettenFehler('laufzeit_ueberschritten');
+  }
+  if (tVon < bVon || tVon > bBis) throw new KettenFehler('berechtigung_abgelaufen');
+  return vorab;
+}
+
 // ── 1. Das Token ────────────────────────────────────────────────────────────
 
 /**
  * Offline-Gültigkeit: Signatur, Produkt, Ablauf. Sonst nichts.
  * Grenzen (`max_*`) bleiben beim Produkt — sie heißen dort verschieden.
  *
+ * Seit 0.2.0 darf `pubkeyPem` ein Schlüsselring `{kid: PEM}` sein, und ein
+ * Token darf über eine Erneuerungskette signiert sein (siehe `kette`).
+ *
+ * Seit 0.2.0 dazu: `offline` (ausdrücklich ausgestellte Offline-Lizenz) und
+ * `anker` (`issued_at`), ab dem `sperrgrund` im Kunden-Modus zählt, wenn kein
+ * Zustand da ist. Ein Offline-Token OHNE lesbaren Ablauf wird abgewiesen
+ * (`offline_ohne_ablauf`): ohne Heartbeat und ohne Ablauf schützte nur noch der
+ * Vertrag — genau das „Offline-Perpetual", das es nicht geben soll.
+ *
  * @returns {{gueltig: boolean, grund: string, nutzlast: object,
- *            lizenzId: string|null, brauchtHeartbeat: boolean}}
+ *            lizenzId: string|null, brauchtHeartbeat: boolean,
+ *            offline: boolean, anker: Date|null}}
  */
 function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   const fertig = (gueltig, grund, nutzlast = {}) => ({
     gueltig, grund, nutzlast,
     lizenzId: nutzlast.license_id == null ? null : String(nutzlast.license_id),
     brauchtHeartbeat: Boolean(nutzlast.require_heartbeat),
+    offline: nutzlast.offline === true,
+    anker: zeitLesen(nutzlast.issued_at),
   });
 
   if (!String(token ?? '').trim()) return fertig(false, 'fehlt');
   let nutzlast;
   try {
-    nutzlast = pruefeSignatur(token, pubkeyPem);
-  } catch {
+    nutzlast = kette(token, pubkeyPem, produkt);
+    if (nutzlast === null) {
+      nutzlast = pruefeSignatur(token, pubkeyPem);
+      if (KEIN_TOKEN.includes(nutzlast.type)) return fertig(false, 'ungueltig');
+    }
+  } catch (e) {
+    if (e instanceof SchluesselUnbekannt) return fertig(false, 'schluessel_unbekannt');
+    if (e instanceof KettenFehler) return fertig(false, e.grund);
     return fertig(false, 'ungueltig');
   }
 
@@ -110,8 +232,56 @@ function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   if (p != null && p !== produkt) return fertig(false, 'falsches_produkt', nutzlast);
 
   const ablauf = zeitLesen(nutzlast.expires_at);
+  if (nutzlast.offline === true && ablauf === null) {
+    return fertig(false, 'offline_ohne_ablauf', nutzlast);
+  }
   if (ablauf !== null && jetzt > ablauf) return fertig(false, 'abgelaufen', nutzlast);
   return fertig(true, 'ok', nutzlast);
+}
+
+/**
+ * Gehört das Token zu DIESER Installation? (seit 0.2.0)
+ *
+ * `'ungebunden'` — das Token trägt keine `install_id` (Altbestand, oder
+ * absichtlich nicht gebunden); was dann gilt, entscheidet das Produkt.
+ * `'ok'` — gebunden und gleich. `'fremd'` — gebunden und anders, ODER die
+ * Installation kennt ihre eigene Kennung nicht: wer seine Kennung verliert,
+ * soll nicht als passend durchgehen.
+ */
+function pruefeBindung(nutzlast, installId) {
+  const soll = (nutzlast ?? {}).install_id;
+  if (soll === null || soll === undefined || soll === '') return 'ungebunden';
+  // Nur eine Zeichenkette bindet. Eine Zahl oder Liste schriebe jede Sprache
+  // anders als Text, und die Bauarten kämen zu verschiedenen Urteilen.
+  if (typeof soll !== 'string') return 'fremd';
+  if (typeof installId !== 'string' || installId === '') return 'fremd';
+  return soll === installId ? 'ok' : 'fremd';
+}
+
+// Ein `Date`, das auch eines ist. `new Date(undefined)` ist ein Date-Objekt mit
+// NaN — jeder Vergleich damit ist falsch, und ein falscher Vergleich hiesse
+// hier „nicht abgelaufen", „nicht überfällig". Alles andere zählt als fehlend.
+function gueltigeZeit(x) {
+  return x instanceof Date && !Number.isNaN(x.getTime()) ? x : null;
+}
+
+/**
+ * Die Zeit, mit der gerechnet wird: die Uhr, aber nie vor der Hochwassermarke
+ * (seit 0.2.0). Die Marke liefert der Aufrufer (z. B. der späteste
+ * Zeitstempel in seiner Datenbank) — der Kern bleibt ohne Uhr und ohne DB.
+ *
+ * Eine zurückgestellte Uhr verlängert so weder Ablauf noch Karenz. Sie wird
+ * GEMELDET (`zurueckgestellt`), nicht bestraft: Sperren bleibt Sache des
+ * Produkts, und eine Uhr kann auch aus harmlosen Gründen springen.
+ *
+ * @returns {{jetzt: Date, zurueckgestellt: boolean}}
+ */
+function wirksameZeit(uhr, marke) {
+  marke = gueltigeZeit(marke);
+  if (marke === null || uhr >= marke) {
+    return { jetzt: uhr, zurueckgestellt: false };
+  }
+  return { jetzt: marke, zurueckgestellt: true };
 }
 
 // ── 2. Das Manifest ─────────────────────────────────────────────────────────
@@ -135,8 +305,8 @@ function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
   let m;
   try {
     m = pruefeSignatur(roh, pubkeyPem);
-  } catch {
-    return u('unbekannt', 'signatur_falsch');
+  } catch (e) {
+    return u('unbekannt', e instanceof SchluesselUnbekannt ? 'schluessel_unbekannt' : 'signatur_falsch');
   }
   if (m.type !== 'license-manifest') return u('unbekannt', 'kein_manifest');
 
@@ -210,6 +380,15 @@ function naechsterZustand(alt, urteil, jetzt) {
 /**
  * `null` · `'widerrufen'` · `'pruefung_ueberfaellig'`.
  *
+ * KUNDEN-MODUS (seit 0.2.0, `optionen.kundenModus`): die zweite Nachsicht
+ * fällt. Solange es keinen erfolgreichen Lauf gibt, zählt die Karenz ab dem
+ * FRÜHEREN von `pendingSeit` und `optionen.anker` (das `issued_at` des Tokens,
+ * siehe `pruefeToken`). Nur ab `pendingSeit` zu zählen reichte nicht: ein
+ * gelöschter Zustand plus ein gesperrter Lizenzserver setzte `pendingSeit`
+ * im nächsten Lauf auf „jetzt" und schenkte eine frische Karenz, beliebig oft.
+ * Ohne lesbaren Anker sperrt der Kunden-Modus sofort; eine `letzteOkPruefung`
+ * in der Zukunft gilt als fehlend. Ohne `optionen` verhält sich alles wie in 0.1.
+ *
  * ZWEI NACHSICHTEN, beide gewollt:
  *
  *  • Ohne `require_heartbeat` im signierten Token gibt es nichts zu prüfen — und
@@ -219,12 +398,24 @@ function naechsterZustand(alt, urteil, jetzt) {
  *  • Ein gerade gestarteter Dienst (noch kein Zustand) wird nicht gesperrt.
  *    Sonst sperrte jeder Neustart, bis der erste Lauf durch ist.
  */
-function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
+function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat, optionen = {}) {
   if (!brauchtHeartbeat) return null;
+  const karenzMs = Math.max(0, karenzTage) * 86400000;
+  if (optionen.kundenModus) {
+    if (zustand?.letzterStatus === 'widerrufen') return 'widerrufen';
+    const ok = gueltigeZeit(zustand?.letzteOkPruefung ?? null);
+    if (ok !== null && ok <= jetzt) {
+      return (jetzt - ok) > karenzMs ? 'pruefung_ueberfaellig' : null;
+    }
+    const anker = gueltigeZeit(optionen.anker ?? null);
+    if (anker === null) return 'pruefung_ueberfaellig';
+    const offen = gueltigeZeit(zustand?.pendingSeit ?? null);
+    const start = offen !== null && offen < anker ? offen : anker;
+    return (jetzt - start) > karenzMs ? 'pruefung_ueberfaellig' : null;
+  }
   if (zustand === null || zustand === undefined) return null;
   if (zustand.letzterStatus === 'widerrufen') return 'widerrufen';
 
-  const karenzMs = Math.max(0, karenzTage) * 86400000;
   if (zustand.letzteOkPruefung != null) {
     return (jetzt - zustand.letzteOkPruefung) > karenzMs ? 'pruefung_ueberfaellig' : null;
   }
@@ -235,6 +426,6 @@ function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat) {
 }
 
 module.exports = {
-  LizenzFehler, zeitLesen, pruefeToken, bewerteManifest,
-  naechsterZustand, sperrgrund,
+  LizenzFehler, SchluesselUnbekannt, BERECHTIGUNG_MAX_TAGE, zeitLesen, pruefeToken, pruefeBindung, wirksameZeit,
+  bewerteManifest, naechsterZustand, sperrgrund,
 };

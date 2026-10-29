@@ -25,10 +25,12 @@ Alles Veränderliche kommt als Argument herein.
 
 | | |
 |---|---|
-| `pruefe_token` | Signatur · Produkt · Ablauf |
+| `pruefe_token` | Signatur · Produkt · Ablauf — seit 0.2.0 auch mit Schlüsselring (`kid`) und Erneuerungskette |
 | `bewerte_manifest` | Typ · Frische · Rückroll-Sperre · Widerruf |
 | `naechster_zustand` | die Einbahnstraßen: klebender Widerruf, stabiler Karenz-Anker |
-| `sperrgrund` | `null` · `widerrufen` · `pruefung_ueberfaellig` |
+| `sperrgrund` | `null` · `widerrufen` · `pruefung_ueberfaellig` — seit 0.2.0 mit Kunden-Modus |
+| `pruefeBindung` | seit 0.2.0: `ungebunden` · `ok` · `fremd` |
+| `wirksameZeit` | seit 0.2.0: die Uhr, nie vor der Hochwassermarke |
 
 Was **nicht** drin ist: was bei „ungültig" passiert. 403 gegen Nur-Lese gegen
 Weiterleitung, welche Pfade frei bleiben, ob GET durchgeht — das bleibt beim

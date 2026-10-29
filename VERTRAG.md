@@ -49,6 +49,19 @@ machen.
 | `require_heartbeat` | **entscheidet, ob der Fern-Widerruf überhaupt greift** |
 | `license_server` | Manifest-URL |
 | `ping_url` | Lebenszeichen-Ziel; gepingt wird `{ping_url}/ping` |
+| `install_id` | *seit 0.2.0, optional:* bindet das Token an eine Installation (`pruefeBindung`) |
+| `renew_url` | *seit 0.2.0, optional:* wo eine Installation ein neues Token holt. Der Kern liest es nicht; es steht im Token, damit der Erneuerungsweg so wenig umbiegbar ist wie `license_server` |
+| `offline` | *seit 0.2.0, optional:* ausdrücklich ausgestellte Offline-Lizenz. **Nur mit lesbarem `expires_at` gültig** (`offline_ohne_ablauf`) |
+| `kid` | *seit 0.2.0, optional:* welcher Schlüssel des Rings signiert hat. Ohne Ring nicht gelesen |
+| `berechtigung` | *seit 0.2.0, optional:* nur in Tokens des Lizenzdienstes — die Erneuerungskette, siehe unten |
+
+Ein signiertes Objekt mit `type` `license-manifest` oder
+`erneuerungs-berechtigung` ist **kein Token** (`ungueltig`), auch ohne Ring.
+Beide sind öffentlich und tragen `product`; das Manifest hat kein
+`expires_at`. Bis 0.1 nahm der Kern ein vorgelegtes Manifest als **gültige,
+unbefristete Lizenz ohne Heartbeat** an (gefunden 29.10.2026, Fall
+`als-token-manifest`). Das ist die eine Stelle, an der 0.2.0 ein Produkt
+ändert, das nichts Neues aufruft — eine Lücke zu schließen ist kein Bruch.
 
 `license_server` und `ping_url` stehen **im signierten Token**, nicht in der
 Umgebung: sonst ließe sich der Widerruf per Konfiguration umbiegen oder
@@ -95,6 +108,86 @@ zurücknimmt.
 
 ---
 
+## Seit 0.2.0: was eine Installation beim Kunden nicht abschalten können soll
+
+Alles hier ist **zusätzlich**. Ein Produkt, das nichts davon aufruft, bekommt
+von 0.2.0 dasselbe wie von 0.1 — die 25 Fälle von 0.1 stehen unverändert im
+Prüfstand und sind der Beleg. Einzige Ausnahme: ein vorgelegtes Manifest oder
+eine Berechtigung gilt nicht mehr als Token (siehe *Token*).
+
+**Kunden-Modus.** `sperrgrund(…, {kundenModus, anker})` (Go: `SperrgrundKunde`)
+lässt die zweite Nachsicht fallen: solange es keinen erfolgreichen Lauf gibt,
+zählt die Karenz ab dem **früheren** von `pending_seit` und `anker`, dem
+`issued_at` des Tokens. Ohne lesbaren Anker sperrt er sofort; eine
+`letzte_ok_pruefung` in der Zukunft gilt als fehlend. Nur ab `pending_seit` zu
+zählen reichte nicht (Durchsicht 27.10.): ein gelöschter Zustand plus ein
+gesperrter Lizenzserver setzte `pending_seit` im nächsten Lauf auf „jetzt“ und
+schenkte eine frische Karenz, beliebig oft. Ein Widerruf klebt auch hier. Was
+der Kern nicht verhindern kann: wer `letzte_ok_pruefung` regelmäßig von Hand
+auf „gerade eben“ setzt, verlängert die Karenz — der Zustand ist unsigniert. Der Preis: eine frische Installation mit einem Token, das älter als die
+Karenz ist, ist bis zum ersten erfolgreichen Heartbeat gesperrt — ein
+erneuertes Token trägt ein neues `issued_at`.
+
+**Bindung.** `pruefeBindung(nutzlast, installId)` sagt `ungebunden` · `ok` ·
+`fremd`. Kennt die Installation ihre eigene Kennung nicht, ist das `fremd`;
+nur eine Zeichenkette im Token bindet (eine Zahl ist `fremd`). Was
+bei `fremd` passiert, entscheidet das Produkt (melden, zählen, sperren).
+
+**Hochwassermarke.** `wirksameZeit(uhr, marke)` rechnet nie vor der Marke, die
+der Aufrufer mitbringt (etwa den spätesten Zeitstempel seiner Datenbank), und
+meldet eine zurückgestellte Uhr. Der Kern bleibt ohne Uhr und ohne Datenbank.
+
+**Offline.** `offline: true` ohne lesbaren Ablauf ist ungültig — ohne Heartbeat
+und ohne Ablauf schützte nur noch der Vertrag.
+
+**Schlüsselring.** Wo der Kern ein PEM nimmt, nimmt er seit 0.2.0 auch einen
+Ring `{kid: PEM}` (Go: `PruefeTokenRing`, `BewerteManifestRing`). Mit Ring
+wählt das `kid` der Nutzlast den Schlüssel — **nur** diesen; ein `kid`, das im
+Ring fehlt, ist `schluessel_unbekannt` (beim Manifest: `unbekannt` /
+`schluessel_unbekannt`, die Karenz greift). Ohne `kid` (Altbestand) darf jeder
+Schlüssel des Rings passen. Ein Image trägt den aktuellen und den nächsten
+Hauptschlüssel; so gelten bei einer Rotation altes und neues Token zugleich
+(`ring-kid-aktuell`, `ring-kid-naechster`). Ein einzelnes PEM verhält sich wie
+in 0.1 — ein `kid` wird dann nicht gelesen.
+
+**Erneuerungskette.** Der Lizenzdienst kennt den Hauptschlüssel nicht. Er hat
+einen eigenen Erneuerungsschlüssel und eine **Berechtigung**, die der
+Hauptschlüssel signiert:
+
+```json
+{ "type": "erneuerungs-berechtigung", "product": "…", "kid": "<Hauptschlüssel>",
+  "renew_kid": "…", "pubkey": "<PEM des Erneuerungsschlüssels>",
+  "issued_at": "…", "expires_at": "…", "max_token_tage": 31 }
+```
+
+Ein Token des Dienstes trägt sie als Draht im Feld `berechtigung` und ist mit
+dem Erneuerungsschlüssel signiert. Geprüft wird in dieser Reihenfolge (alle
+drei Bauarten gleich): Berechtigung vom Hauptschlüssel (Ring-Regeln wie oben)
+und vom Typ `erneuerungs-berechtigung`, Token vom genannten `pubkey` — sonst
+`ungueltig` · `product` der Berechtigung = Produkt — sonst `falsches_produkt` ·
+Berechtigung höchstens **366 Tage** und `max_token_tage` eine ganze Zahl > 0 —
+sonst `berechtigung_ungueltig` · Token mit lesbarem `issued_at` und
+`expires_at`, höchstens `max_token_tage` lang — sonst `laufzeit_ueberschritten`
+· `issued_at` des Tokens im Fenster der Berechtigung — sonst
+`berechtigung_abgelaufen`. Danach gelten Produkt, Offline und Ablauf wie bei
+jedem Token.
+
+Das Fenster misst `issued_at`, **nicht die Uhr**: läuft die Berechtigung ab,
+laufen schon ausgestellte Tokens ihre kurze Zeit zu Ende, statt dass alle
+Kunden im selben Augenblick stehen (`kette-letztes-token-der-berechtigung`).
+Ein gestohlener Erneuerungsschlüssel stellt damit höchstens Tokens für dieses
+Produkt aus, je höchstens `max_token_tage` lang, bis die Berechtigung abläuft —
+nie ein unbefristetes. Welche Lizenzen er ausstellen darf, prüft der Kern
+nicht; das bleibt beim Dienst und beim Manifest (Widerruf).
+
+**Zeitstempel sind ISO-8601 mit `Z`.** Die Console schreibt so, und nur so lesen
+die drei Sprachen gleich: ein Datum ohne Zeitzone liest JavaScript als Ortszeit,
+Python und Go als UTC; ein Datum ohne Uhrzeit nimmt Go gar nicht an. Das ist
+Verhalten von 0.1 und bleibt (Durchsicht 27.10.2026) — wer Token oder Manifest
+ausstellt, schreibt `Z`.
+
+---
+
 ## Was der Kern NICHT entscheidet
 
 Der Kern sagt **ob** die Lizenz trägt. Was dann passiert, bleibt beim Produkt —
@@ -114,10 +207,22 @@ nicht falsch. Ein Produkt, das den **Kern** anders beantwortet, schon.
 
 ## Ausdrücklich nicht Teil davon
 
-**Manipulationsschutz.** Wer den Container hat, kann jede Prüfung entfernen —
-dagegen hilft kein Obfuskator. Der Notaus schützt gegen Versehen und gegen
-Ablauf, **nicht** gegen einen Kunden, der den Container aufmacht. Das ist eine
-Entscheidung und kein Rückstand.
+**Vollständiger Manipulationsschutz.** Wer den Container hat, kann jede
+Prüfung entfernen — dagegen hilft kein Obfuskator. Der Kern bleibt eine reine
+Zustandsmaschine; das **Schutzziel** des Produkts darum herum (seit 0.2.0,
+Plan „Lizenzschutz on-premise“, Oktober 2026) ist dreiteilig:
+
+- **Kein Schalter.** Beim Kunden gibt es keine Einstellung, Variable oder
+  Tabelle, die die Prüfung abschaltet oder verlängert (Kunden-Modus,
+  Hochwassermarke, kurze Tokens aus der Erneuerungskette).
+- **Eine Hürde.** Den Schutz zu umgehen heißt, Code zu verändern — nicht, eine
+  Datei zu bearbeiten. Was dagegen hilft (Bytecode, signierte Lieferung),
+  macht das Produkt, nicht der Kern.
+- **Rückverfolgung.** Eine weitergegebene Kopie verrät ihre Herkunft
+  (`license_id`, `install_id` im signierten Token); den Rest trägt der Vertrag.
+
+Gegen einen Kunden, der den Container aufmacht und den Code umschreibt, hilft
+das nicht. Das ist eine Entscheidung und kein Rückstand.
 
 **Gemeinsame Schlüsselpaare.** Jedes Produkt behält sein eigenes. Wären sie
 zusammengelegt, würde jede Lücke im Produkt-Wächter sofort scharf.
