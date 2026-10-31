@@ -210,22 +210,30 @@ test('KONTROLLFALL: Attrappe sagt immer true ⇒ das fremde Token gilt', () => {
   assert.equal(kern.pruefeToken(TOKEN_FREMD, HAUPT.pem, PRODUKT, JETZT, { verifiziere: referenz }).grund, 'ungueltig');
 });
 
+// Diese drei zählen die Aufrufe mit: `ungueltig` allein sähe genauso aus, wenn
+// die Option gar nicht gefragt und der gebogene node:crypto gescheitert wäre.
 test('Rückgabe 1 zählt nicht als wahr', () => {
   const { kern } = gebogenerKern();
-  assert.equal(kern.pruefeToken(TOKEN, HAUPT.pem, PRODUKT, JETZT, { verifiziere: () => 1 }).grund, 'ungueltig');
+  const v = zaehlend(() => 1);
+  assert.equal(kern.pruefeToken(TOKEN_FREMD, HAUPT.pem, PRODUKT, JETZT, { verifiziere: v }).grund, 'ungueltig');
+  assert.equal(v.aufrufe.length, 1);
 });
 
 test("Rückgabe 'true' zählt nicht als wahr", () => {
   const { kern } = gebogenerKern();
-  assert.equal(kern.pruefeToken(TOKEN, HAUPT.pem, PRODUKT, JETZT, { verifiziere: () => 'true' }).grund, 'ungueltig');
+  const v = zaehlend(() => 'true');
+  assert.equal(kern.pruefeToken(TOKEN_FREMD, HAUPT.pem, PRODUKT, JETZT, { verifiziere: v }).grund, 'ungueltig');
+  assert.equal(v.aufrufe.length, 1);
 });
 
 test('eine werfende Option ist eine falsche Signatur, kein Absturz', () => {
-  const { kern } = gebogenerKern();
-  const u = kern.pruefeToken(TOKEN, HAUPT.pem, PRODUKT, JETZT, { verifiziere: () => { throw new Error('x'); } });
-  assert.equal(u.grund, 'ungueltig');
-  const m = kern.bewerteManifest(MANIFEST, HAUPT.pem, 'lic-1', JETZT, null, { verifiziere: () => { throw new Error('x'); } });
+  const { kern, beruehrt } = gebogenerKern();
+  const v = zaehlend(() => { throw new Error('x'); });
+  assert.equal(kern.pruefeToken(TOKEN, HAUPT.pem, PRODUKT, JETZT, { verifiziere: v }).grund, 'ungueltig');
+  const m = kern.bewerteManifest(MANIFEST, HAUPT.pem, 'lic-1', JETZT, null, { verifiziere: v });
   assert.equal(m.detail, 'signatur_falsch');
+  assert.equal(v.aufrufe.length, 2);
+  assert.deepEqual(beruehrt, { verify: 0, createPublicKey: 0 });
 });
 
 // ── Alle Wege: Ring mit/ohne kid, Kette, Manifest ──────────────────────────
