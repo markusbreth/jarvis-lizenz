@@ -60,6 +60,16 @@ jobs:
           n=$(echo "$aus" | grep -oE '^Prüfstand[^—]*— [0-9]+' | grep -oE '[0-9]+$')
           [ "${n:-0}" -ge 20 ] || { echo "::error::nur ${n:-0} Fälle"; exit 1; }
 
+      # Seit 0.2.1: die eingespeiste Prüfung gibt es nur in JS, darum eigene
+      # Einheitsfälle neben dem gemeinsamen Prüfstand. Zusätzlich muss
+      # mindestens ein Fall gelaufen sein — `node --test` ohne Fund ist kein Grün.
+      - name: JS-Einheitsfälle (eingespeiste Prüfung)
+        working-directory: paket/js
+        run: |
+          aus=$(node --test --test-reporter=spec 2>&1) || { echo "$aus"; exit 1; }
+          echo "$aus" | tail -8
+          echo "$aus" | grep -qE '^ℹ tests [1-9]' || { echo "::error::keine JS-Fälle gelaufen"; exit 1; }
+
       # Die mitgelieferte `index.d.ts` gegen den echten Gebrauch halten. Eine
       # FALSCHE Deklaration ist schlimmer als keine: sie prueft durch und
       # luegt — der Compiler gibt eine Zusicherung ab, die das Laufzeit-

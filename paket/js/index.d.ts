@@ -62,13 +62,38 @@ export type TokenUrteil = {
   anker?: Date | null;
 };
 
+/**
+ * Eine eingespeiste Ed25519-Pruefung (seit 0.2.1): `roh` sind die Nutzlast-
+ * Bytes, `sig` die 64 Signaturbytes, `rohSchluessel` die 32 Rohbytes des
+ * oeffentlichen Schluessels, die der Kern selbst aus dem SPKI-PEM zerlegt.
+ * Nur ein echtes `true` zaehlt; ein Wurf ist eine falsche Signatur.
+ */
+export type Verifiziere = (roh: Uint8Array, sig: Uint8Array, rohSchluessel: Uint8Array) => boolean;
+
+/**
+ * Seit 0.2.1. Mit `verifiziere` prueft der Kern JEDE Signatur (Schluessel,
+ * Ring, Kette, Manifest) nur ueber sie und beruehrt node:crypto dafuer nicht.
+ * Ohne Angabe alles wie in 0.2.0.
+ */
+export type PruefOptionen = {
+  verifiziere?: Verifiziere | null;
+};
+
 /** Offline-Gueltigkeit: Signatur, Produkt, Ablauf. Grenzen bleiben beim Produkt. */
 export function pruefeToken(
   token: string,
   pubkeyPem: Schluessel,
   produkt: string,
   jetzt: Date,
+  optionen?: PruefOptionen,
 ): TokenUrteil;
+
+/**
+ * SPKI-PEM → die 32 Rohbytes eines Ed25519-Schluessels, ohne `createPublicKey`
+ * (seit 0.2.1). Kein Ed25519-SPKI (falsches Praefix, falsche Laenge, kein
+ * base64) → `LizenzFehler`.
+ */
+export function rohSchluessel(pem: string): Uint8Array;
 
 export type ManifestUrteil = {
   /** `aktiv` · `widerrufen` · `unbekannt` */
@@ -114,6 +139,7 @@ export function bewerteManifest(
   lizenzId: string | null,
   jetzt: Date,
   letzteSeq: number | null,
+  optionen?: PruefOptionen,
 ): ManifestUrteil;
 
 export type Zustand = {
@@ -166,5 +192,6 @@ declare const kern: {
   bewerteManifest: typeof bewerteManifest;
   naechsterZustand: typeof naechsterZustand;
   sperrgrund: typeof sperrgrund;
+  rohSchluessel: typeof rohSchluessel;
 };
 export default kern;
