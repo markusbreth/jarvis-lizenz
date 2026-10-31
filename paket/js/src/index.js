@@ -98,10 +98,10 @@ const istRing = (s) => s !== null && typeof s === 'object' && !Array.isArray(s);
  * nicht im Ring steht, ist `SchluesselUnbekannt`. Ohne `kid` (Altbestand) darf
  * jeder Schlüssel des Rings passen.
  */
-function pruefeSignatur(draht, schluessel) {
+function pruefeSignatur(draht, schluessel, v) {
   const [roh, sig] = teile(draht);
   if (!istRing(schluessel)) {
-    verifiziere(roh, sig, schluessel);
+    verifiziere(roh, sig, schluessel, v);
     return jsonObjekt(roh);
   }
   const nutzlast = jsonObjekt(roh);
@@ -109,7 +109,7 @@ function pruefeSignatur(draht, schluessel) {
   if (kid === null || kid === undefined) {
     for (const pem of Object.values(schluessel)) {
       try {
-        verifiziere(roh, sig, pem);
+        verifiziere(roh, sig, pem, v);
         return nutzlast;
       } catch { /* nächster Schlüssel */ }
     }
@@ -118,11 +118,56 @@ function pruefeSignatur(draht, schluessel) {
   if (typeof kid !== 'string' || !Object.prototype.hasOwnProperty.call(schluessel, kid)) {
     throw new SchluesselUnbekannt(`kid ${JSON.stringify(kid)} steht nicht im Ring`);
   }
-  verifiziere(roh, sig, schluessel[kid]);
+  verifiziere(roh, sig, schluessel[kid], v);
   return nutzlast;
 }
 
-function verifiziere(roh, sig, pubkeyPem) {
+// Seit 0.2.1. DER-Kopf eines Ed25519-SPKI: SEQUENCE(42) { SEQUENCE(5) { OID
+// 1.3.101.112 }, BIT STRING(33, 0 ungenutzte Bits) } — danach die 32 Rohbytes.
+const ED25519_SPKI_PRAEFIX = Buffer.from('302a300506032b6570032100', 'hex');
+
+/**
+ * SPKI-PEM → die 32 Rohbytes des Ed25519-Schlüssels, oder LizenzFehler (seit 0.2.1).
+ *
+ * Absichtlich OHNE `createPublicKey`: diese Zerlegung ist der Weg der
+ * eingespeisten Prüfung, und die soll node:crypto gar nicht berühren — ein
+ * vorgeladenes Paket, das `createPublicKey` umbiegt, könnte sonst für den
+ * Prüfschlüssel des Images den Schlüssel des Angreifers zurückgeben.
+ */
+function rohSchluessel(pem) {
+  if (typeof pem !== 'string') throw new LizenzFehler('Schlüssel ist kein PEM');
+  const zeilen = pem.trim().split(/\r?\n/).map((z) => z.trim());
+  if (zeilen.length < 3 || zeilen[0] !== '-----BEGIN PUBLIC KEY-----'
+      || zeilen[zeilen.length - 1] !== '-----END PUBLIC KEY-----') {
+    throw new LizenzFehler('Schlüssel ist kein SPKI-PEM');
+  }
+  const b64 = zeilen.slice(1, -1).join('');
+  // Buffer.from(…, 'base64') überspringt fremde Zeichen stillschweigend — darum vorher streng.
+  if (b64.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) {
+    throw new LizenzFehler('PEM-Inhalt ist kein base64');
+  }
+  const der = Buffer.from(b64, 'base64');
+  if (der.length !== 44 || !der.subarray(0, 12).equals(ED25519_SPKI_PRAEFIX)) {
+    throw new LizenzFehler('kein Ed25519-SPKI-Schlüssel');
+  }
+  return new Uint8Array(der.subarray(12));
+}
+
+// `v` ist die eingespeiste Prüfung (seit 0.2.1) oder `undefined`. Mit ihr
+// entscheidet NUR sie, und nur ein echtes `true` zählt — `1`, `'true'`, ein
+// Wurf: alles „Signatur passt nicht".
+function verifiziere(roh, sig, pubkeyPem, v) {
+  if (v !== undefined) {
+    const schluessel = rohSchluessel(pubkeyPem);
+    let ja;
+    try {
+      ja = v(roh, sig, schluessel);
+    } catch {
+      ja = false;
+    }
+    if (ja !== true) throw new LizenzFehler('Signatur passt nicht');
+    return;
+  }
   let key;
   try {
     key = createPublicKey(pubkeyPem);
@@ -131,6 +176,10 @@ function verifiziere(roh, sig, pubkeyPem) {
   }
   if (!edVerify(null, roh, key, sig)) throw new LizenzFehler('Signatur passt nicht');
 }
+
+// `null`/fehlend heißt: keine eingespeiste Prüfung. Alles andere wird benutzt —
+// auch eine Nicht-Funktion; deren Aufruf wirft, und das ist „falsch", nie „egal".
+const eingespeist = (optionen) => optionen?.verifiziere ?? undefined;
 
 // Wie `_ganz_positiv` in Python und die float64-Prüfung in Go: 31.0 zählt.
 const ganzPositiv = (x) => typeof x === 'number' && Number.isInteger(x) && x > 0;
@@ -151,7 +200,7 @@ const ganzPositiv = (x) => typeof x === 'number' && Number.isInteger(x) && x > 0
  * nicht die Uhr: läuft die Berechtigung ab, bleiben schon ausgestellte Tokens
  * ihre kurze Laufzeit gültig, statt alle Kunden im selben Augenblick zu sperren.
  */
-function kette(token, schluessel, produkt) {
+function kette(token, schluessel, produkt, v) {
   const [roh, sig] = teile(token);
   let vorab;
   try {
@@ -162,10 +211,10 @@ function kette(token, schluessel, produkt) {
   if (!Object.prototype.hasOwnProperty.call(vorab, 'berechtigung')) return null;
   const bDraht = vorab.berechtigung;
   if (typeof bDraht !== 'string') throw new LizenzFehler('berechtigung ist keine Zeichenkette');
-  const b = pruefeSignatur(bDraht, schluessel);
+  const b = pruefeSignatur(bDraht, schluessel, v);
   if (b.type !== 'erneuerungs-berechtigung') throw new LizenzFehler('berechtigung hat den falschen Typ');
   if (typeof b.pubkey !== 'string') throw new LizenzFehler('berechtigung nennt keinen Schlüssel');
-  verifiziere(roh, sig, b.pubkey);
+  verifiziere(roh, sig, b.pubkey, v);
 
   if (b.product !== produkt) throw new KettenFehler('falsches_produkt');
   const bVon = zeitLesen(b.issued_at);
@@ -199,11 +248,18 @@ function kette(token, schluessel, produkt) {
  * (`offline_ohne_ablauf`): ohne Heartbeat und ohne Ablauf schützte nur noch der
  * Vertrag — genau das „Offline-Perpetual", das es nicht geben soll.
  *
+ * Seit 0.2.1: `optionen.verifiziere(roh, sig, rohSchluessel) → boolean` ist
+ * eine EINGESPEISTE Ed25519-Prüfung. Mit ihr prüft der Kern jede Signatur
+ * (Schlüssel, Ring, Kette) nur über sie und berührt node:crypto dafür nicht —
+ * ein vorgeladenes Paket im Kunden-Image kann `crypto.verify` umbiegen, eine
+ * ins Erzeugnis gebündelte Prüfung nicht. Ohne Option alles wie in 0.2.0.
+ *
  * @returns {{gueltig: boolean, grund: string, nutzlast: object,
  *            lizenzId: string|null, brauchtHeartbeat: boolean,
  *            offline: boolean, anker: Date|null}}
  */
-function pruefeToken(token, pubkeyPem, produkt, jetzt) {
+function pruefeToken(token, pubkeyPem, produkt, jetzt, optionen = {}) {
+  const v = eingespeist(optionen);
   const fertig = (gueltig, grund, nutzlast = {}) => ({
     gueltig, grund, nutzlast,
     lizenzId: nutzlast.license_id == null ? null : String(nutzlast.license_id),
@@ -215,9 +271,9 @@ function pruefeToken(token, pubkeyPem, produkt, jetzt) {
   if (!String(token ?? '').trim()) return fertig(false, 'fehlt');
   let nutzlast;
   try {
-    nutzlast = kette(token, pubkeyPem, produkt);
+    nutzlast = kette(token, pubkeyPem, produkt, v);
     if (nutzlast === null) {
-      nutzlast = pruefeSignatur(token, pubkeyPem);
+      nutzlast = pruefeSignatur(token, pubkeyPem, v);
       if (KEIN_TOKEN.includes(nutzlast.type)) return fertig(false, 'ungueltig');
     }
   } catch (e) {
@@ -292,9 +348,12 @@ function wirksameZeit(uhr, marke) {
  * JEDE Störung ist `unbekannt` — damit greift die Karenzzeit, statt sofort zu
  * sperren. `widerrufen` gibt es nur bei einem ausdrücklichen Eintrag.
  *
+ * `optionen.verifiziere` wie bei `pruefeToken` (seit 0.2.1).
+ *
  * @returns {{status: string, detail: string, seq: number|null, entitlements: object|null}}
  */
-function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
+function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq, optionen = {}) {
+  const v = eingespeist(optionen);
   const u = (status, detail, seq = null, entitlements = null) =>
     ({ status, detail, seq, entitlements });
 
@@ -304,7 +363,7 @@ function bewerteManifest(roh, pubkeyPem, lizenzId, jetzt, letzteSeq) {
 
   let m;
   try {
-    m = pruefeSignatur(roh, pubkeyPem);
+    m = pruefeSignatur(roh, pubkeyPem, v);
   } catch (e) {
     return u('unbekannt', e instanceof SchluesselUnbekannt ? 'schluessel_unbekannt' : 'signatur_falsch');
   }
@@ -427,5 +486,5 @@ function sperrgrund(zustand, jetzt, karenzTage, brauchtHeartbeat, optionen = {})
 
 module.exports = {
   LizenzFehler, SchluesselUnbekannt, BERECHTIGUNG_MAX_TAGE, zeitLesen, pruefeToken, pruefeBindung, wirksameZeit,
-  bewerteManifest, naechsterZustand, sperrgrund,
+  bewerteManifest, naechsterZustand, sperrgrund, rohSchluessel,
 };

@@ -1,6 +1,6 @@
 {
   "name": "@markusbreth/jarvis-lizenz",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Der geteilte Kern der JARVIS-Lizenzpruefung — reine Zustandsmaschine, keine Ein-/Ausgabe.",
   "license": "UNLICENSED",
   "private": true,

@@ -37,6 +37,33 @@ Weiterleitung, welche Pfade frei bleiben, ob GET durchgeht — das bleibt beim
 Produkt, und die Unterschiede sind teilweise Absicht (GoBD: *der Kunde kommt an
 seine eigenen Bücher*). Siehe [VERTRAG.md](VERTRAG.md).
 
+## Eingespeiste Prüfung (seit 0.2.1)
+
+Nur in JS: `pruefeToken(…, jetzt, { verifiziere })` und
+`bewerteManifest(…, letzteSeq, { verifiziere })` nehmen eine eigene
+Ed25519-Prüfung `verifiziere(roh, sig, rohSchluessel) → boolean` an
+(`rohSchluessel` = die 32 Rohbytes, die der Kern selbst aus dem SPKI-PEM
+zerlegt, siehe `rohSchluessel(pem)`).
+
+**Warum.** Im Kunden-Image kann ein Paket, das vor dem Kern lädt,
+`crypto.verify` oder `createPublicKey` umbiegen — im groben Fall `() => true`,
+im feinen nur für den Prüfschlüssel des Images. Einen Selbsttest gegen
+Testvektoren besteht der feine Patch. Erst eine Prüfung, die node:crypto für
+die Signatur **gar nicht berührt** und ins Erzeugnis gebündelt ist, schließt das.
+
+**Was gilt.** Mit Option prüft der Kern **jede** Signatur nur über sie —
+einzelner Schlüssel, Ring mit und ohne `kid`, Erneuerungskette (Berechtigung
+und Token), Manifest — und ruft weder `verify` noch `createPublicKey`. Nur ein
+echtes `true` zählt; `1`, `'true'` oder ein Wurf sind eine falsche Signatur.
+Ein PEM, das kein Ed25519-SPKI ist, ist ein `LizenzFehler`. **Ohne Option
+alles wie in 0.2.0** — belegt durch den unveränderten Prüfstand in allen drei
+Sprachen. Python und Go haben die Option nicht: dort gibt es keinen vorladbaren
+JS-Code.
+
+Der Kern bleibt ohne Abhängigkeiten; die Prüffunktion liefert das Produkt
+(z. B. eine exakt gepinnte, ins Erzeugnis gebündelte reine Ed25519).
+Einheitsfälle: `node --test` in `paket/js`.
+
 ## Prüfen
 
 ```bash

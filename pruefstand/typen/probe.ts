@@ -18,13 +18,16 @@ import kern, {
   naechsterZustand,
   pruefeBindung,
   pruefeToken,
+  rohSchluessel,
   sperrgrund,
   wirksameZeit,
   zeitLesen,
   BERECHTIGUNG_MAX_TAGE,
   type ManifestUrteil,
+  type PruefOptionen,
   type Schluessel,
   type TokenUrteil,
+  type Verifiziere,
   type Zustand,
 } from '@markusbreth/jarvis-lizenz';
 
@@ -79,6 +82,15 @@ const mitRing: TokenUrteil = pruefeToken('a.b', ring, 'produkt', jetzt);
 const manifestRing: ManifestUrteil = bewerteManifest('a.b', ring, 'lic-1', jetzt, null);
 const maxTage: number = BERECHTIGUNG_MAX_TAGE;
 
+// 8. Seit 0.2.1: eingespeiste Pruefung — fuer Token UND Manifest.
+const eigene: Verifiziere = (roh, sig, schluessel) =>
+  roh.length > 0 && sig.length === 64 && schluessel.length === 32;
+const optionen: PruefOptionen = { verifiziere: eigene };
+const mitOption: TokenUrteil = pruefeToken('a.b', ring, 'produkt', jetzt, optionen);
+const manifestOption: ManifestUrteil = bewerteManifest('a.b', 'PEM', 'lic-1', jetzt, null, optionen);
+const roh32: Uint8Array = rohSchluessel('PEM');
+const ueberDefaultRoh: Uint8Array = kern.rohSchluessel('PEM');
+
 // Alles benutzen, damit `noUnusedLocals` nicht zuschlaegt und die Zeilen
 // wirklich geprueft werden statt wegoptimiert.
 export const summe = [
@@ -86,4 +98,5 @@ export const summe = [
   neu.letzterStatus, sperre, keinZustand, ueberDefault.gueltig, zeit,
   offline, anker, bindung, ohneKennung, wirksam.zurueckgestellt, kundenSperre,
   ueberDefaultBindung, mitRing.grund, manifestRing.detail, maxTage,
+  mitOption.grund, manifestOption.detail, roh32.length, ueberDefaultRoh.length,
 ].length;
