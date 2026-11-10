@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Dieselben Felder wie der Befehl, aber ohne `type`",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZWZlaGwiOiJ3aWRlcnJ1ZmVuIiwiYmVmZWhsX2lkIjoiYi0xIiwiaXNzdWVkX2F0IjoiMjAyNi0wOC0yOFQxMTo1OTowMFoiLCJraWQiOiJrMSIsImxpY2Vuc2VfaWQiOiJsaWMtMSJ9.Co21SVH2kc3U8PydXdh7z8pe71Iu7wywGkLuFHkjH01GM3bjdhYxUoPm37RPTE4YQPpJY_gE5n-xZbD7iwmGCg"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ok",
+    "token_gueltig": true,
+    "zustand": null
+  },
+  "name": "als-token-gegenprobe-ohne-type",
+  "warum": "DER KONTROLLFALL: was den Befehl abweist, ist allein das Feld `type` — nicht fehlendes `product`, nicht fehlendes `expires_at` (beides ist für Altbestand erlaubt, siehe token-ohne-produktfeld, token-unbefristet)."
+}

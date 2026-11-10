@@ -53,13 +53,14 @@ type schluessel struct {
 	ring Ring
 }
 
-// Signierte Objekte, die KEIN Token sind. Beide sind oeffentlich (das Manifest
-// holt jede Installation, die Berechtigung steckt in jedem erneuerten Token),
-// beide tragen `product` und kein `expires_at` bzw. ein langes — als Token
-// vorgelegt waeren sie eine unbefristete Lizenz ohne Heartbeat gewesen.
-func keinToken(nutzlast map[string]any) bool {
-	t, _ := nutzlast["type"].(string)
-	return t == "license-manifest" || t == "erneuerungs-berechtigung"
+// Seit 0.2.2: ein Token hat KEIN Feld `type` (VERTRAG.md, Token-Tabelle). Jedes
+// andere signierte Objekt traegt eines — Manifest, Berechtigung, Befehl der
+// Console — und als Token vorgelegt waere es eine Lizenz ohne Ablauf gewesen.
+// Bis 0.2.1 stand hier eine Sperrliste; ihr fehlte der Befehl (Durchsicht
+// v147, L1-5). Die Form faengt auch den naechsten Typ, die Liste nicht.
+func traegtTyp(nutzlast map[string]any) bool {
+	_, da := nutzlast["type"]
+	return da
 }
 
 func b64urlDec(s string) ([]byte, error) {
@@ -329,7 +330,7 @@ func pruefeToken(token string, s schluessel, produkt string, jetzt time.Time) To
 	nutzlast, istKette, err := kette(token, s, produkt)
 	if err == nil && !istKette {
 		nutzlast, err = pruefeSignatur(token, s)
-		if err == nil && keinToken(nutzlast) {
+		if err == nil && traegtTyp(nutzlast) {
 			return TokenUrteil{false, "ungueltig", map[string]any{}}
 		}
 	}

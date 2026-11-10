@@ -807,6 +807,47 @@ namen.append(efall(
     "vom Hauptschlüssel signiert. Als Token wäre sie eine Lizenz für ein Jahr.",
     ue(u(False, "ungueltig")), token=berechtigung(), pubkey_ersatz=RING))
 
+# Seit 0.2.2: ein Token hat kein Feld `type` — gleich welcher Wert. Bis 0.2.1
+# stand hier eine Sperrliste (Manifest, Berechtigung), und der Befehl der
+# Console fehlte darin (Durchsicht v147, L1-5).
+
+
+def befehl(**over) -> dict:
+    """Ein Befehl der Console an den Lizenzdienst, wie ihn der Hauptring signiert."""
+    b = {
+        "type": "lizenzdienst-befehl", "kid": "k1", "befehl_id": "b-1",
+        "befehl": "widerrufen", "license_id": LIZENZ,
+        "issued_at": iso(JETZT - timedelta(minutes=1)),
+    }
+    b.update(over)
+    return b
+
+
+namen.append(efall(
+    "als-token-lizenzdienst-befehl",
+    "Ein signierter Befehl der Console als Token vorgelegt",
+    "LÜCKE DER 0.2.1 (Durchsicht v147, L1-5): der Befehl ist vom Hauptring "
+    "signiert, hat kein `product` und kein `expires_at` — als Token war er eine "
+    "unbefristete Lizenz. Die Sperrliste kannte ihn nicht. Gegenstück: "
+    "als-token-gegenprobe-ohne-type.",
+    ue(u(False, "ungueltig")), token=draht(befehl()), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "als-token-gegenprobe-ohne-type",
+    "Dieselben Felder wie der Befehl, aber ohne `type`",
+    "DER KONTROLLFALL: was den Befehl abweist, ist allein das Feld `type` — "
+    "nicht fehlendes `product`, nicht fehlendes `expires_at` (beides ist für "
+    "Altbestand erlaubt, siehe token-ohne-produktfeld, token-unbefristet).",
+    ue(u(True, "ok")),
+    token=draht({k: v for k, v in befehl().items() if k != "type"}), pubkey_ersatz=RING))
+
+namen.append(efall(
+    "als-token-unbekannter-type",
+    "Ein vollständiges Token, das zusätzlich einen erfundenen `type` trägt",
+    "Unterscheidet die Form von einer Aufzählung: eine Sperrliste, die um den "
+    "Befehl verlängert wurde, ließe den nächsten signierten Typ wieder durch.",
+    ue(u(False, "ungueltig")), token=token(type="ein-kuenftiger-typ")))
+
 namen.append(efall(
     "ring-manifest-naechster",
     "Manifest mit `kid: k2`, vom nächsten Schlüssel signiert, Ring",
