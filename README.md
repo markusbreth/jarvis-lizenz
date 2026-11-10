@@ -64,6 +64,16 @@ Der Kern bleibt ohne Abhängigkeiten; die Prüffunktion liefert das Produkt
 (z. B. eine exakt gepinnte, ins Erzeugnis gebündelte reine Ed25519).
 Einheitsfälle: `node --test` in `paket/js`.
 
+## Kein Token mit `type` (seit 0.2.2)
+
+Ein Token hat kein Feld `type`; trägt eine signierte Nutzlast eines, ist sie
+`ungueltig` — in allen drei Sprachen. Bis 0.2.1 stand hier eine Sperrliste
+(Manifest, Berechtigung), und ein vom Hauptring signierter Befehl der Console
+(`lizenzdienst-befehl`) kam als unbefristete Lizenz durch. Die Form fängt
+auch jeden nächsten signierten Typ. Wer Tokens ausstellt, schreibt kein
+`type` hinein. Einzelheiten und woran ein Produkt merkt, dass es betroffen
+war: [VERTRAG.md](VERTRAG.md#seit-022-die-form-entscheidet-nicht-eine-liste).
+
 ## Prüfen
 
 ```bash

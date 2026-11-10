@@ -34,11 +34,12 @@ class KettenFehler extends LizenzFehler {
 const BERECHTIGUNG_MAX_TAGE = 366;
 const TAG_MS = 86400000;
 
-// Signierte Objekte, die KEIN Token sind. Beide sind öffentlich (das Manifest
-// holt jede Installation, die Berechtigung steckt in jedem erneuerten Token),
-// beide tragen `product` und kein `expires_at` bzw. ein langes — als Token
-// vorgelegt wären sie eine unbefristete Lizenz ohne Heartbeat gewesen.
-const KEIN_TOKEN = ['license-manifest', 'erneuerungs-berechtigung'];
+// Seit 0.2.2: ein Token hat KEIN Feld `type` (VERTRAG.md, Token-Tabelle). Jedes
+// andere signierte Objekt trägt eines — Manifest, Berechtigung, Befehl der
+// Console — und als Token vorgelegt wäre es eine Lizenz ohne Ablauf gewesen.
+// Bis 0.2.1 stand hier eine Sperrliste; ihr fehlte der Befehl (Durchsicht
+// v147, L1-5). Die Form fängt auch den nächsten Typ, die Liste nicht.
+const traegtTyp = (nutzlast) => Object.prototype.hasOwnProperty.call(nutzlast, 'type');
 
 function b64urlDec(s) {
   return Buffer.from(s + '='.repeat((4 - (s.length % 4)) % 4), 'base64url');
@@ -274,7 +275,7 @@ function pruefeToken(token, pubkeyPem, produkt, jetzt, optionen = {}) {
     nutzlast = kette(token, pubkeyPem, produkt, v);
     if (nutzlast === null) {
       nutzlast = pruefeSignatur(token, pubkeyPem, v);
-      if (KEIN_TOKEN.includes(nutzlast.type)) return fertig(false, 'ungueltig');
+      if (traegtTyp(nutzlast)) return fertig(false, 'ungueltig');
     }
   } catch (e) {
     if (e instanceof SchluesselUnbekannt) return fertig(false, 'schluessel_unbekannt');

@@ -72,11 +72,13 @@ class _KettenFehler(LizenzFehler):
 # lange — 366 statt 365, damit ein Jahr mit Schalttag hineinpasst.
 BERECHTIGUNG_MAX_TAGE = 366
 
-# Signierte Objekte, die KEIN Token sind. Beide sind öffentlich (das Manifest
-# holt jede Installation, die Berechtigung steckt in jedem erneuerten Token),
-# beide tragen `product` und kein `expires_at` bzw. ein langes — als Token
-# vorgelegt wären sie eine unbefristete Lizenz ohne Heartbeat gewesen.
-_KEIN_TOKEN = ("license-manifest", "erneuerungs-berechtigung")
+# Seit 0.2.2: ein Token hat KEIN Feld `type` (VERTRAG.md, Token-Tabelle). Jedes
+# andere signierte Objekt trägt eines — Manifest, Berechtigung, Befehl der
+# Console — und als Token vorgelegt wäre es eine Lizenz ohne Ablauf gewesen.
+# Bis 0.2.1 stand hier eine Sperrliste; ihr fehlte der Befehl (Durchsicht
+# v147, L1-5). Die Form fängt auch den nächsten Typ, die Liste nicht.
+def _traegt_typ(nutzlast: dict) -> bool:
+    return "type" in nutzlast
 
 
 def _teile(draht: str) -> tuple[bytes, bytes]:
@@ -258,7 +260,7 @@ def pruefe_token(token: str, pubkey_pem: str | dict, produkt: str,
         nutzlast = _kette(token, pubkey_pem, produkt)
         if nutzlast is None:
             nutzlast = _pruefe_signatur(token, pubkey_pem)
-            if nutzlast.get("type") in _KEIN_TOKEN:
+            if _traegt_typ(nutzlast):
                 return TokenUrteil(False, "ungueltig")
     except SchluesselUnbekannt:
         return TokenUrteil(False, "schluessel_unbekannt")

@@ -55,12 +55,12 @@ machen.
 | `kid` | *seit 0.2.0, optional:* welcher Schlüssel des Rings signiert hat. Ohne Ring nicht gelesen |
 | `berechtigung` | *seit 0.2.0, optional:* nur in Tokens des Lizenzdienstes — die Erneuerungskette, siehe unten |
 
-Ein signiertes Objekt mit `type` `license-manifest` oder
-`erneuerungs-berechtigung` ist **kein Token** (`ungueltig`), auch ohne Ring.
-Beide sind öffentlich und tragen `product`; das Manifest hat kein
-`expires_at`. Bis 0.1 nahm der Kern ein vorgelegtes Manifest als **gültige,
-unbefristete Lizenz ohne Heartbeat** an (gefunden 29.10.2026, Fall
-`als-token-manifest`). Das ist die eine Stelle, an der 0.2.0 ein Produkt
+**Ein Token hat kein Feld `type`.** Ein signiertes Objekt, das eines trägt —
+gleich welcher Wert, auch `null` —, ist **kein Token** (`ungueltig`), auch
+ohne Ring (seit 0.2.2, siehe unten; davor nur `license-manifest` und
+`erneuerungs-berechtigung`). Bis 0.1 nahm der Kern ein vorgelegtes Manifest
+als **gültige, unbefristete Lizenz ohne Heartbeat** an (gefunden 29.10.2026,
+Fall `als-token-manifest`). Das ist die eine Stelle, an der 0.2.0 ein Produkt
 ändert, das nichts Neues aufruft — eine Lücke zu schließen ist kein Bruch.
 
 `license_server` und `ping_url` stehen **im signierten Token**, nicht in der
@@ -185,6 +185,34 @@ die drei Sprachen gleich: ein Datum ohne Zeitzone liest JavaScript als Ortszeit,
 Python und Go als UTC; ein Datum ohne Uhrzeit nimmt Go gar nicht an. Das ist
 Verhalten von 0.1 und bleibt (Durchsicht 27.10.2026) — wer Token oder Manifest
 ausstellt, schreibt `Z`.
+
+---
+
+## Seit 0.2.2: die Form entscheidet, nicht eine Liste
+
+Bis 0.2.1 wies der Kern als Token nur ab, was in einer Sperrliste stand
+(Manifest, Berechtigung). Der **Befehl der Console an den Lizenzdienst**
+(`type: lizenzdienst-befehl`) ist vom selben Hauptring signiert, hat kein
+`product` und kein `expires_at` — und bestand `pruefeToken` als **gültiges,
+unbefristetes Token** (Durchsicht v147, L1-5). Die Liste hatte ihn
+verschwiegen, wie sie jeden nächsten Typ verschwiegen hätte.
+
+Seit 0.2.2 gilt die Form aus der Token-Tabelle oben: **trägt die Nutzlast den
+Schlüssel `type`, ist sie kein Token** — in allen drei Bauarten gleich, nur auf
+dem Weg über den Hauptschlüssel (Tokens der Erneuerungskette prüft weiter die
+Kette). Fälle: `als-token-lizenzdienst-befehl`, `als-token-unbekannter-type`
+(ein erfundener Typ — trennt die Form von einer verlängerten Liste) und der
+Kontrollfall `als-token-gegenprobe-ohne-type` (dieselben Felder ohne `type`
+bleiben gültig).
+
+**Woran ein Produkt merkt, dass es bis 0.2.1 betroffen war:** es ruft
+`pruefeToken` / `pruefe_token` / `PruefeToken(Ring)` mit dem **Hauptschlüssel
+oder Ring, der auch Befehle signiert**, und nimmt `gueltig`/`ok` ohne eigene
+Formprüfung der Nutzlast (etwa auf `issued_at`, `license_id`, `customer`) als
+Lizenz. Ein geleakter Befehl war dort eine Dauerlizenz ohne Heartbeat.
+
+**Was ein Aussteller beachten muss:** ein Token mit einem Feld `type` ist ab
+0.2.2 `ungueltig`. Wer Tokens ausstellt, schreibt kein `type` hinein.
 
 ---
 

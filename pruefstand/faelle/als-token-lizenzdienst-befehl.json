@@ -1,0 +1,29 @@
+{
+  "beschreibung": "Ein signierter Befehl der Console als Token vorgelegt",
+  "eingang": {
+    "erweitert": true,
+    "jetzt": "2026-08-28T12:00:00Z",
+    "karenz_tage": 7,
+    "produkt": "pruef-produkt",
+    "pubkey": {
+      "k1": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAA6EHv/POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg=\n-----END PUBLIC KEY-----\n",
+      "k2": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAiOR2lURJQLw8airG/1LqCPq+vNh8WdWK1Lkw1genYNE=\n-----END PUBLIC KEY-----\n"
+    },
+    "token": "eyJiZWZlaGwiOiJ3aWRlcnJ1ZmVuIiwiYmVmZWhsX2lkIjoiYi0xIiwiaXNzdWVkX2F0IjoiMjAyNi0wOC0yOFQxMTo1OTowMFoiLCJraWQiOiJrMSIsImxpY2Vuc2VfaWQiOiJsaWMtMSIsInR5cGUiOiJsaXplbnpkaWVuc3QtYmVmZWhsIn0.bYhJ103mFM3IcbRcE7si0oqT0TvOXOj2X1J7HnshPj7Pu_CnIlWX0nsPMCJtg0j_42ZmNrN-1XHjOy2BRYVUDQ"
+  },
+  "erwartet": {
+    "erweiterung": {
+      "bindung": null,
+      "offline": false,
+      "uhr_zurueckgestellt": false
+    },
+    "manifest_detail": null,
+    "manifest_status": null,
+    "sperrgrund": null,
+    "token_grund": "ungueltig",
+    "token_gueltig": false,
+    "zustand": null
+  },
+  "name": "als-token-lizenzdienst-befehl",
+  "warum": "LÜCKE DER 0.2.1 (Durchsicht v147, L1-5): der Befehl ist vom Hauptring signiert, hat kein `product` und kein `expires_at` — als Token war er eine unbefristete Lizenz. Die Sperrliste kannte ihn nicht. Gegenstück: als-token-gegenprobe-ohne-type."
+}
