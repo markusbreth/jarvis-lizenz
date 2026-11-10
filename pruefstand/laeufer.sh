@@ -51,6 +51,18 @@ print(json.dumps(d, sort_keys=True, separators=(',',':'), ensure_ascii=False))"
 BAUARTEN=("$@")
 if [ ${#BAUARTEN[@]} -eq 0 ]; then BAUARTEN=(py js go); fi
 
+# Der Go-Prüfling ist ein lokal gebautes, von git ignoriertes Erzeugnis. Ein alter
+# Build misst den alten Kern, ohne dass es jemand merkt (10.11.2026: nach Kern 0.2.2
+# liess der Build vom 31.10. zwei type-Fälle als gültige Tokens durch). Darum vor
+# jedem Lauf neu bauen; go build ist inkrementell. Scheitert der Build, ist Go
+# nicht messbar — kein Rückfall auf den alten Build.
+for b in "${BAUARTEN[@]}"; do
+  if [ "$b" = go ] && command -v go >/dev/null && [ -d "$WURZEL/paket/go/pruefling" ]; then
+    (cd "$WURZEL/paket/go" && go build -o pruefling/pruefling ./pruefling) \
+      || { echo "FEHLER: Go-Prüfling lässt sich nicht bauen — nicht messbar"; exit 2; }
+  fi
+done
+
 VORHANDEN=()
 for b in "${BAUARTEN[@]}"; do
   if bauart_da "$b"; then VORHANDEN+=("$b"); else echo "übersprungen: $b (nicht gebaut)"; fi
